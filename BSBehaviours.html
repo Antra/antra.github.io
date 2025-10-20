@@ -10,25 +10,173 @@
   <meta name="description" content="Blackstone Fortress AI behavior generator and helper app">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <style>
-    .loading {
-      opacity: 0.5;
-      pointer-events: none;
+    /* 3-column header: empty | middle (stats+buttons+checkbox) | right (stats-matrix) */
+    .card-header {
+      display: grid;
+      grid-template-columns: 35% 30% 35%;
+      gap: 12px;
+      align-items: start;
+      width: 100%;
+      min-height: 160px;
+      box-sizing: border-box;
     }
 
-    .stats-display {
-      display: block;
-      margin-right: 10px;
-      color: #6c757d;
-      font-size: 0.9rem;
+    .card-header>.mid-column,
+    .card-header>ul.nav,
+    .card-header>.form-check {
+      grid-column: 2;
+    }
+
+    /* ensure the middle area stacks and centers its contents */
+    .card-header .mid-column,
+    .card-header ul.nav {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 0;
+    }
+
+    /* keep buttons centered and wrap if needed */
+    .mid-column .btn-group-sm,
+    .card-header ul.nav .btn-group-sm {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* show stats-line above the buttons while keeping it in the same container */
+    .mid-column .btn-group-sm>.stats-display,
+    .card-header ul.nav .btn-group-sm>.stats-display {
+      order: -1;
+      width: 100%;
       text-align: center;
+      margin-bottom: 6px;
     }
 
-    .stats-display .line2 {
+    .card .card-body .card-text {
+      white-space: normal;
+      /* allow wrapping */
       display: block;
-      font-size: 0.8rem;
+      line-height: 1.2em;
+      min-height: calc(2 * 1.2em);
+      /* reserve space for two lines */
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Right column: stats matrix — left aligned inside column and about 500px wide */
+    .stats-table {
+      grid-column: 3;
+      justify-self: start;
+      /* align left inside right column */
+      align-self: start;
+      /* align to top of header */
+      width: 600px;
+      /* preferred width to fit text */
+      max-width: 48vw;
+      min-height: 120px;
+      box-sizing: border-box;
+      margin-left: 6px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* keep the table at top of the stats-table and allow the special rules to scroll */
+    .stats-table table {
+      width: 100%;
+      max-height: 160px;
+      /* prevent table from growing indefinitely */
+      overflow: visible;
+      /* table shows fully; if it gets tall, special rules area will scroll */
+      display: block;
+    }
+
+    /* special rules under stats-matrix */
+    .stats-special {
+      margin: 0;
+      padding: 6px 0 0 0;
+      text-align: left;
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+      font-size: 0.85rem;
+      color: #444;
+      overflow-y: auto;
+    }
+
+    .stats-special .rule-row {
+      margin: 4px 0;
+    }
+
+    .stats-special .rule-row i {
+      /* all special-rules italic */
       font-style: italic;
-      margin-top: -2px;
-      margin-bottom: +2px;
+      display: block;
+    }
+
+    .stats-special .rule-row strong {
+      /* key bold inside italic */
+      font-weight: 600;
+      margin-right: 6px;
+      font-style: italic;
+      /* keep key italic too so whole line is italic with bold key */
+    }
+
+    /* dice icon fills */
+    .dice-icon {
+      font-size: 0.95rem;
+      display: inline-block;
+      width: 1.1em;
+      height: 1.1em;
+      line-height: 1.1em;
+      text-align: center;
+      border-radius: 2px;
+    }
+
+    .dice-pentagon {
+      color: #7ec8ff;
+    }
+
+    .dice-triangle {
+      color: #c9a3ff;
+    }
+
+    .dice-square {
+      color: #bfc3c6;
+    }
+
+    #toggleHostileCollapseButton {
+      min-width: 150px;
+      /* make button wider so label changes don't shift layout */
+      white-space: nowrap;
+      /* prevent label wrapping */
+      padding: .375rem .9rem;
+      background-color: #6ea8d6;
+      /* softer light-blue (less prominent than btn-dark) */
+      color: #fff;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: none;
+    }
+
+    .special-rules-list ul {
+      list-style-type: none;
+      padding-left: 0;
+      font-style: italic;
+      text-align: left;
+      margin-left: 0;
+    }
+
+
+
+    #toggleHostileCollapseButton:hover,
+    #toggleHostileCollapseButton:focus {
+      background-color: #5b95cf;
+      color: #fff;
+      box-shadow: none;
     }
   </style>
 
@@ -65,7 +213,7 @@
 
   var onslaughtResult = {
     result: "ONSLAUGHT",
-    descr: "Attack the closest explorer that is in range of and visible to this hostile. Then attack the closest explorer that is in range of and visible to this hostile.(This may be a different target if the first explorer is taken out of action or another explorer is equally close).",
+    descr: "Attack the closest explorer that is in range of and visible to this hostile. Then attack the closest explorer that is in range of and visible to this hostile (this may be a different target if the first explorer is taken out of action or another explorer is equally close).",
     note: ""
   }
 
@@ -113,7 +261,7 @@
 
   var rechargeResult = {
     result: "RECHARGE",
-    descr: "Remove a wound counter fromthe Negavolt Cultist. If the Negavolt Cultist does not have a wound counter, treat this result as an Advance result instead.",
+    descr: "Remove a wound counter from the Negavolt Cultist. If the Negavolt Cultist does not have a wound counter, treat this result as an Advance result instead.",
     note: ""
   }
 
@@ -422,9 +570,23 @@
         break;
       }
     }
-
-
   }
+
+  // toggle helper: updates label to reflect current visible collapse state
+  function updateToggleLabel() {
+    var $visible = $('#hostilesButtonGroup > .container-fluid:visible');
+    var $btn = $('#toggleHostileCollapseButton');
+    if ($visible.length === 0) {
+      $btn.prop('disabled', true).text('Expand All');
+      return;
+    }
+    var anyCollapsed = false;
+    $visible.each(function () {
+      if (!$(this).find('.collapse.multi-collapse').hasClass('show')) anyCollapsed = true;
+    });
+    $btn.prop('disabled', false).text(anyCollapsed ? 'Expand All' : 'Collapse All');
+  }
+
 
   function generateEventResult(rollModifier, eventResultsObject, eventDetailsObject) {
     var rollResult = rollD20(rollModifier);
@@ -457,6 +619,175 @@
     eventResultsObject.text(rollResult + " - " + eventResults[indexValue].descr);
     eventDetailsObject.text(eventResults[indexValue].details);
   }
+  // helper: render known icons as colored filled glyphs
+  function renderIconHtml(raw) {
+    if (!raw) return '';
+    var s = raw.toString();
+    // detect shapes: support both white and black unicode variants
+    if (s.indexOf('⬠') !== -1 || s.indexOf('⬟') !== -1) {
+      return '<span class="dice-icon dice-pentagon">&#x2B1F;</span>'; // black pentagon
+    }
+    if (s.indexOf('△') !== -1 || s.indexOf('▲') !== -1) {
+      return '<span class="dice-icon dice-triangle">&#x25B2;</span>'; // black triangle
+    }
+    if (s.indexOf('□') !== -1 || s.indexOf('■') !== -1) {
+      return '<span class="dice-icon dice-square">&#x25A0;</span>'; // black square
+    }
+    // fallback: return escaped text
+    return $('<div/>').text(s).html();
+  }
+
+  // helper: replace "(1)" / "(2)" with HTML superscripts in already-escaped text
+  function formatSuperscriptsEscaped(escapedHtml) {
+    if (!escapedHtml) return escapedHtml;
+    return escapedHtml
+      .replace(/\(1\)/g, '<sup>1</sup>')
+      .replace(/\(2\)/g, '<sup>2</sup>')
+      .replace(/\(3\)/g, '<sup>3</sup>')
+      .replace(/\(4\)/g, '<sup>4</sup>');
+  }
+
+  // helper: format a cell or rule text -> escaped HTML + superscripts + colored icon spans
+  function formatCellHtml(raw) {
+    if (raw === undefined || raw === null) return '';
+    var s = raw.toString();
+
+    // escape
+    var esc = $('<div/>').text(s).html();
+
+    // convert (n) -> <sup>n</sup>
+    esc = formatSuperscriptsEscaped(esc);
+
+    // replace known unicode shapes with coloured spans (keeps other text intact)
+    esc = esc
+      .replace(/⬠|⬟/g, '<span class="dice-icon dice-pentagon">&#x2B1F;</span>') // pentagon variants
+      .replace(/△|▲/g, '<span class="dice-icon dice-triangle">&#x25B2;</span>') // triangle variants
+      .replace(/□|■/g, '<span class="dice-icon dice-square">&#x25A0;</span>');   // square variants
+
+    return esc;
+  }
+
+  // Default stats matrix header
+  var defaultStatsHeader = ["Weapon", "Range 1", "Range 2-3", "Range 4+"];
+  // Build/populate the table in the container with id "<HOSTILE>StatsTable"
+  function populateStatsMatrix(hostile) {
+    if (!hostile) return;
+    var hostileId = hostile.id || '';
+    var $container = $('#' + hostileId + 'StatsTable');
+    if ($container.length === 0) {
+      console.warn('populateStatsMatrix: missing container for', hostileId);
+      return;
+    }
+
+    // choose header: hostile override or default
+    var headerData = (hostile.statsMatrix && hostile.statsMatrix.header && hostile.statsMatrix.header.length)
+      ? hostile.statsMatrix.header.slice()
+      : defaultStatsHeader.slice();
+
+    // ensure at least 4 columns in header
+    if (headerData.length < 4) {
+      while (headerData.length < 4) headerData.push('');
+    }
+
+    var $table = $('<table/>').addClass('table table-sm mb-0');
+    var $thead = $('<thead/>');
+    var $hrow = $('<tr/>');
+    headerData.forEach(function (h) {
+      // header cells may also contain (n) references, format them
+      $hrow.append($('<th/>').html(formatCellHtml(h)));
+    });
+    $thead.append($hrow);
+    $table.append($thead);
+
+    var $tbody = $('<tbody/>');
+
+    var rows = (hostile.statsMatrix && hostile.statsMatrix.rows && hostile.statsMatrix.rows.length) ? hostile.statsMatrix.rows : null;
+
+    if (!rows) {
+      // produce a single empty row if none provided
+      var $r = $('<tr/>');
+      for (var i = 0; i < headerData.length; i++) $r.append($('<td/>').html(''));
+      $tbody.append($r);
+    } else {
+      rows.forEach(function (row) {
+        var $r = $('<tr/>');
+        // first (label) cell - format (superscripts etc)
+        $r.append($('<td/>').html(formatCellHtml(row.label || '')));
+        // remaining cells (format with icons/superscripts)
+        for (var c = 1; c < headerData.length; c++) {
+          var rawCell = (row.cols && row.cols[c - 1] !== undefined) ? row.cols[c - 1] : '';
+          $r.append($('<td/>').html(formatCellHtml(rawCell)));
+        }
+        $tbody.append($r);
+      });
+    }
+    $table.append($tbody);
+
+    // prepare special rules block (clear old content first)
+    var $special = $('<div/>').addClass('stats-special');
+    var specialRules = (hostile.statsMatrix && hostile.statsMatrix.specialRules && hostile.statsMatrix.specialRules.length) ? hostile.statsMatrix.specialRules : null;
+
+    if (specialRules && specialRules.length) {
+      specialRules.forEach(function (rule) {
+        var key = rule.key || '';
+        var value = rule.value || '';
+        // format both key and value (superscripts + icons if present)
+        var escKey = formatCellHtml(key);
+        var escVal = formatCellHtml(value);
+        // whole line italic, key bold (and italic)
+        var $row = $('<div/>').addClass('rule-row').html('<i><strong>' + escKey + '</strong>: ' + escVal + '</i>');
+        $special.append($row);
+      });
+    } else {
+      // if no special rules, keep a single empty line so layout remains predictable
+      $special.append($('<div/>').addClass('rule-row').html('<i></i>'));
+    }
+
+    // insert table + special rules into container
+    $container.empty().append($table).append($special);
+  }
+
+  function populateSpecialRules(hostile) {
+    if (!hostile) return;
+    var hostileId = hostile.id || '';
+
+    // Find the target container
+    var $container = $('#' + hostileId + 'SpecialRules');
+
+    // Clear any existing content
+    $container.empty();
+
+    // Check if specialRules exist and are non-empty
+    if (hostile.specialRules && hostile.specialRules.length > 0) {
+      // Create the header
+      var $header = $('<h5>').text('Special Rules').css({
+        'font-weight': 'bold',
+        'margin-top': '10px'
+      });
+
+      // Create the list
+      var $list = $('<ul>').css({
+        'font-style': 'italic',
+        'margin-left': '20px',
+        'list-style-type': 'none',
+        'padding-left': '0',
+      });
+
+      // Loop through all special rules
+      hostile.specialRules.forEach(function (rule) {
+        var $item = $('<li>');
+        var $key = $('<strong>').text(rule.key + ': ');
+        var $value = $('<span>').text(rule.value);
+
+        $item.append($key).append($value);
+        $list.append($item);
+      });
+
+      // Append everything to the container
+      $container.append($header).append($list);
+    }
+  }
+
 
   // Traitor Guardsmen
   var traitorGuardHostile = {
@@ -466,6 +797,22 @@
     move: 2,
     wounds: 2,
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Flamer(1)", cols: ["⬠", "⬠", "Move Up(2)"] },
+        { label: "Lasgun", cols: ["△", "△", "△"] },
+        { label: "Pistol & Melee Weapon", cols: ["△△", "□", "□"] },
+        { label: "Grenade", cols: ["□", "△", "△"] }
+      ],
+      specialRules: [
+        { key: 'Blast(1)', value: 'Ignores cover. Hits the entire hex, not just the target.' },
+        { key: 'Move Up(2)', value: 'The flamer cannot be fired from this range, move towards closest explorer instead.' }
+      ]
+    },
+    specialRules: [
+      { key: 'Traitor Guardsman Sergeant', value: 'Add 1 to the wounds value of a Traitor Guardsman Sergeant.' },
+      { key: 'Traitor Guardsman Groups', value: 'Cannot include more than 1 Sergeant and 1 Flamer. If a group has five or more miniatures, it must include a Sergeant and a Flamer if they are available.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -548,9 +895,20 @@
     name: "Negavolt cultist",
     id: "NG",
     size: "LARGE",
-    move: "??",
-    wounds: "??",
+    move: 3,
+    wounds: 2,
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Electro-goad(1)", cols: ["△", "-", "-"] }
+      ],
+      specialRules: [
+        { key: 'Lightning Arc(1)', value: 'Ignore cover. In addition, no defense roll can be made against a wound or grievous wound inflicted by an Electro-goad attack.' }
+      ]
+    },
+    specialRules: [
+      { key: 'Voltagheist Field', value: 'Roll the Blackstone dice each time a wound or grievous wound is suffered by a Negavolt Cultist. Add 2 to the dice roll for each other Negavolt Cultist in the same hex or adjacent hex to the target. On a roll of 20+ the wound or grievous wound is negated.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return rechargeResult;
@@ -585,9 +943,23 @@
     name: "Spindle Drone",
     id: "SD",
     size: "SMALL",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 2,
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Pulse: Threat Level 0(1)", cols: ["□", "□", "□"] },
+        { label: "Pulse: Threat Level 1(1)", cols: ["△", "△", "△"] },
+        { label: "Pulse: Threat Level 2(1)", cols: ["□", "□", "□"] },
+        { label: "Pulse: Threat Level 3(1)", cols: ["⬠", "⬠", "⬠"] },
+      ],
+      specialRules: [
+        { key: 'Spindle Drone Threat Level(1)', value: 'Use the Pulse weapon line on the chart that corresponds to the current threat level.' }
+      ]
+    },
+    specialRules: [
+      { key: 'Threat Level', value: 'The threat level for a combat starts at 0. It increases by 1 if an alert result is rolled on the Spindle Drone behaviour table. In addition, each time a Spindle Drone is slain, the threat level increases by 1. Keep track of the current threat level by placing placing a threat level coutner with the number corresponding to the current threat level besides the board. The threat level can never be higher than 3, and drops back to 0 at the end of the combat.' }
+    ],
     hiddenResult: function (rollResult) {
 
       if (rollResult < 4)
@@ -709,6 +1081,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 7)
         return hoverdronesResult;
@@ -762,9 +1142,20 @@
     name: "Ur-Ghul",
     id: "UG",
     size: "SMALL",
-    move: "??",
-    wounds: "??",
+    move: 3,
+    wounds: 3,
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Claws & Talons(1)", cols: ["△", "-", "-"] }
+      ],
+      specialRules: [
+        { key: 'Frenzied(1)', value: 'When an Ur-Ghul attacks, make three attack rolls. Carry out each attack one at the time, one after the other. The target chosen for the second and third attacks must either be the same target of the previous attack, or in the same hex as or an adjacent hex to the target of the previous attack.' }
+      ]
+    },
+    specialRules: [
+      { key: 'Hide in the Shadows', value: 'An Ur-Ghul is treated as being in cover if their attacker is more than 3 hexes from the Ur-Ghul.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -818,9 +1209,19 @@
     name: "Chaos Beastman",
     id: "CB",
     size: "LARGE",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 3,
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Pistol & Melee Weapon", cols: ["⬠", "△", "□"] }
+      ],
+      specialRules: []
+    },
+    specialRules: [
+      { key: 'Bellowing Beast', value: 'The cost of an action is increased by 1 for explorers who are adjacent to one or more Chaos Beastmen that are visible to them, to a maximum cost of 6+. For example the cost of a (4+) action would be increased to (5+).' },
+      { key: 'Furious Charge', value: "Add 1 to a Chaos Beastman's Move value if they are taking a Charge action." }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -862,9 +1263,21 @@
     name: "Rogue Psyker",
     id: "RP",
     size: "LARGE",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 2,
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Chaos Stave(1)", cols: ["△/△△", "△/△△", "△/△△"] }
+      ],
+      specialRules: [
+        { key: 'Empowered(1)', value: 'The action dice for a Chaos Stave attack is doubled if the Rogue Psyker is empowered.' }
+      ]
+    },
+    specialRules: [
+      { key: 'Psychic Shield', value: 'Roll the Blackstone dice each time a wound or grievous wound is suffered by a Rogue Psyker. On a 20+, the wound or grievous wound is negated. If the Rogue Psyker is empowered, then the wound or grievous wound is negated on a 16+.' },
+      { key: 'Empowered', value: 'Empowered is gained via certain actions. The Rogue Psyker remains empowered until they suffer a wound or grievous wound.' },
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 10)
         return holdResult;
@@ -918,9 +1331,15 @@
     name: "Chaos Space Marine",
     id: "CSM",
     size: "LARGE",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 4,
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Bolter", cols: ["△△", "⬠", "⬠"] }
+      ],
+      specialRules: []
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return sneakResult;
@@ -974,9 +1393,22 @@
     name: "Obsidius Mallex",
     id: "OM",
     size: "HUGE",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 12,
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Thunder Hammer(1)", cols: ["⬠⬠", "-", "-"] },
+        { label: "Plasma Pistol(2)", cols: ["-", "⬠", "△"] }
+      ],
+      specialRules: [
+        { key: 'Thunder Hammer(1)', value: 'No defense roll can be made against a Thunder Hammer attack.' },
+        { key: 'Plasma Pistol(2)', value: 'No defense roll can be made against an overcharged Plasma Pistol attack.' }
+      ]
+    },
+    specialRules: [
+      { key: 'Lord of War', value: 'When Obsidius Mallex is activated, he takes two actions, one after the other. Roll on the behaviour table for his first action, and then take it. Then roll on the behaviour table again for his second action, and then take it.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4) {
 
@@ -1053,6 +1485,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -1113,6 +1553,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return borewyrmTunnelResult;
@@ -1177,6 +1625,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 7)
         return holdResult;
@@ -1235,6 +1691,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     bodyguardResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -1297,6 +1761,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 7)
         return holdResult;
@@ -1332,6 +1804,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return sneakResult;
@@ -1384,6 +1864,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 20)
         return disruptResult;
@@ -1435,6 +1923,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return warpsurgeResult;
@@ -1477,6 +1973,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -1534,6 +2038,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -1591,6 +2103,14 @@
     move: "??",
     wounds: "??",
     statline2: "",
+    statsMatrix: {
+      rows: [
+        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+      ],
+      specialRules: [
+        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+      ]
+    },
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -1720,7 +2240,7 @@
     $('#MOPButton').show();
     $('#CLButton').show();
     $('#CFButton').show();
-    $('#CFButton').show();
+    $('#GDButton').show();
   }
 
   function generateRollResult(modifier, hostileObject, hostileResultObject, hostileDescrObject, hostileStatus) {
@@ -1843,7 +2363,6 @@
             if ($(this).val() == 'TG') {
               $('#TGButton').hide();
             }
-
             if ($(this).val() == 'NG')
               $('#NGButton').hide();
             if ($(this).val() == 'UG')
@@ -1901,6 +2420,8 @@
       if (traitorGuardHostile.statline2) {
         $('#TGStatline2').text(traitorGuardHostile.statline2);
       }
+      populateStatsMatrix(traitorGuardHostile);
+      populateSpecialRules(traitorGuardHostile);
 
       $('#TGHiddenButton').click(
 
@@ -1978,6 +2499,10 @@
       if (negavoltCultistHostile.statline2) {
         $('#NGStatline2').text(negavoltCultistHostile.statline2);
       }
+      populateStatsMatrix(negavoltCultistHostile);
+      populateSpecialRules(negavoltCultistHostile);
+
+
       $('#NGHiddenButton').click(
 
         function () {
@@ -2010,6 +2535,9 @@
       if (spindleDroneHostile.statline2) {
         $('#SDStatline2').text(spindleDroneHostile.statline2);
       }
+      populateStatsMatrix(spindleDroneHostile);
+      populateSpecialRules(spindleDroneHostile);
+
       $('#SDHiddenButton').click(
 
         //if($("input:checked").val()=='TG')
@@ -2083,6 +2611,8 @@
       if (guardianDroneHostile.statline2) {
         $('#GDStatline2').text(guardianDroneHostile.statline2);
       }
+      populateStatsMatrix(guardianDroneHostile);
+      populateSpecialRules(guardianDroneHostile);
 
       $('#GDHiddenButton').click(
 
@@ -2131,6 +2661,9 @@
       if (urGhulHostile.statline2) {
         $('#UGStatline2').text(urGhulHostile.statline2);
       }
+      populateStatsMatrix(urGhulHostile);
+      populateSpecialRules(urGhulHostile);
+
       $('#UGHiddenButton').click(
 
         function () {
@@ -2170,6 +2703,9 @@
       if (chaosBeastmanHostile.statline2) {
         $('#CBStatline2').text(chaosBeastmanHostile.statline2);
       }
+      populateStatsMatrix(chaosBeastmanHostile);
+      populateSpecialRules(chaosBeastmanHostile);
+
       $('#CBHiddenButton').click(
 
         function () {
@@ -2209,6 +2745,9 @@
       if (roguePsykerHostile.statline2) {
         $('#RPStatline2').text(roguePsykerHostile.statline2);
       }
+      populateStatsMatrix(roguePsykerHostile);
+      populateSpecialRules(roguePsykerHostile);
+
       $('#RPHiddenButton').click(
 
         function () {
@@ -2248,6 +2787,9 @@
       if (chaosSpaceMarineHostile.statline2) {
         $('#CSMStatline2').text(chaosSpaceMarineHostile.statline2);
       }
+      populateStatsMatrix(chaosSpaceMarineHostile);
+      populateSpecialRules(chaosSpaceMarineHostile);
+
       $('#CSMHiddenButton').click(
 
         function () {
@@ -2294,6 +2836,9 @@
       if (obsidiusMallexHostile.statline2) {
         $('#OMStatline2').text(obsidiusMallexHostile.statline2);
       }
+      populateStatsMatrix(obsidiusMallexHostile);
+      populateSpecialRules(obsidiusMallexHostile);
+
       $('#OMHiddenButton').click(
 
         function () {
@@ -2341,6 +2886,9 @@
       if (ambullHostile.statline2) {
         $('#AMStatline2').text(ambullHostile.statline2);
       }
+      populateStatsMatrix(ambullHostile);
+      populateSpecialRules(ambullHostile);
+
       $('#AMHiddenButton').click(
 
         function () {
@@ -2387,6 +2935,9 @@
       if (borewyrmInfestationHostile.statline2) {
         $('#BIStatline2').text(borewyrmInfestationHostile.statline2);
       }
+      populateStatsMatrix(borewyrmInfestationHostile);
+      populateSpecialRules(borewyrmInfestationHostile);
+
       $('#BIHiddenButton').click(
 
         function () {
@@ -2433,6 +2984,10 @@
       if (traitorCommissarHostile.statline2) {
         $('#TCStatline2').text(traitorCommissarHostile.statline2);
       }
+      populateStatsMatrix(traitorCommissarHostile);
+      populateSpecialRules(traitorCommissarHostile);
+
+
       $('#TCHiddenButton').click(
 
         function () {
@@ -2479,6 +3034,9 @@
       if (chaosOgrynHostile.statline2) {
         $('#COStatline2').text(chaosOgrynHostile.statline2);
       }
+      populateStatsMatrix(chaosOgrynHostile);
+      populateSpecialRules(chaosOgrynHostile);
+
       $('#COHiddenButton').click(
 
         function () {
@@ -2525,6 +3083,9 @@
       if (poxwalkerHostile.statline2) {
         $('#PWStatline2').text(poxwalkerHostile.statline2);
       }
+      populateStatsMatrix(poxwalkerHostile);
+      populateSpecialRules(poxwalkerHostile);
+
       $('#PWHiddenButton').click(
 
         function () {
@@ -2557,6 +3118,9 @@
       if (plagueMarineHostile.statline2) {
         $('#PMStatline2').text(plagueMarineHostile.statline2);
       }
+      populateStatsMatrix(plagueMarineHostile);
+      populateSpecialRules(plagueMarineHostile);
+
       $('#PMHiddenButton').click(
 
         function () {
@@ -2603,6 +3167,9 @@
       if (masterOfPossessionHostile.statline2) {
         $('#MOPStatline2').text(masterOfPossessionHostile.statline2);
       }
+      populateStatsMatrix(masterOfPossessionHostile);
+      populateSpecialRules(masterOfPossessionHostile);
+
       $('#MOPHiddenButton').click(
 
         function () {
@@ -2649,6 +3216,9 @@
       if (greaterPossessedHostile.statline2) {
         $('#GPStatline2').text(greaterPossessedHostile.statline2);
       }
+      populateStatsMatrix(greaterPossessedHostile);
+      populateSpecialRules(greaterPossessedHostile);
+
       $('#GPHiddenButton').click(
 
         function () {
@@ -2688,6 +3258,9 @@
       if (cultistHostile.statline2) {
         $('#CLStatline2').text(cultistHostile.statline2);
       }
+      populateStatsMatrix(cultistHostile);
+      populateSpecialRules(cultistHostile);
+
       $('#CLHiddenButton').click(
 
         function () {
@@ -2751,6 +3324,9 @@
       if (cultistFirebrandHostile.statline2) {
         $('#CFStatline2').text(cultistFirebrandHostile.statline2);
       }
+      populateStatsMatrix(cultistFirebrandHostile);
+      populateSpecialRules(cultistFirebrandHostile);
+
       $('#CFHiddenButton').click(
 
         function () {
@@ -2797,6 +3373,9 @@
       if (archHostile.statline2) {
         $('#ARCStatline2').text(archHostile.statline2);
       }
+      populateStatsMatrix(archHostile);
+      populateSpecialRules(archHostile);
+
       $('#ARCHiddenButton').click(
 
         function () {
@@ -2900,6 +3479,30 @@
       $('#blackstoneRoll').hide();
       $('#resetHostilesButton').hide();
 
+      // click handler — expand if any visible is collapsed, otherwise collapse all visible
+      $('#toggleHostileCollapseButton').click(function () {
+        var $visible = $('#hostilesButtonGroup > .container-fluid:visible');
+        var anyCollapsed = false;
+        $visible.each(function () {
+          if (!$(this).find('.collapse.multi-collapse').hasClass('show')) anyCollapsed = true;
+        });
+
+        if (anyCollapsed) {
+          $visible.each(function () { $(this).find('.collapse.multi-collapse').collapse('show'); });
+        } else {
+          $visible.each(function () { $(this).find('.collapse.multi-collapse').collapse('hide'); });
+        }
+        // update label after toggle (small delay for bootstrap animation)
+        setTimeout(updateToggleLabel, 150);
+      });
+
+      // keep label in sync when hostiles are shown/hidden or individual collapse changes
+      $('#multiHostileSelect').on('change', updateToggleLabel);
+      $('#generateHostileButton, #clearHostileListButon').on('click', function () { setTimeout(updateToggleLabel, 100); });
+      $(document).on('shown.bs.collapse hidden.bs.collapse', '#hostilesButtonGroup .collapse', updateToggleLabel);
+
+      // initial state
+      updateToggleLabel();
     });
 
 
@@ -2955,6 +3558,7 @@
         <div class="text-center"><button type="button" class="btn btn-dark" id="clearHostileListButon">Clear
             Selection</button>
           <button type="button" class="btn btn-danger" id="generateHostileButton">Show All Hostiles</button>
+          <button type="button" class="btn btn-secondary" id="toggleHostileCollapseButton">Expand All</button>
         </div>
       </div>
       <!-- Traitor Guardsmen-->
@@ -2965,29 +3569,38 @@
           <div class="collapse multi-collapse" id="TGCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="TGMoveStats"></span>, <strong>W:</strong><span
-                            id="TGWoundStats"></span></span>
-                        <span class="line2" id="TGStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="TGHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="TGEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="TGCoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="TGCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="TGOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
-                <div class="form-check">
-                  <input type="checkbox" class="form-check-input" name="" id="TGCheckBox" value="TG">
-                  <label class="form-check-label" for="TGCheckBox">
-                    Traitor Commissar Motivation Active
-                  </label>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="TGSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="TGMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="TGWoundStats"></span></span>
+                          <span class="line2" id="TGStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="TGHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="TGEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="TGCoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="TGCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="TGOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                  <!-- Check box here -->
+                  <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="" id="TGCheckBox" value="TG">
+                    <label class="form-check-label" for="TGCheckBox">
+                      Traitor Commissar Motivation Active
+                    </label>
+                  </div>
                 </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="TGStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="TGResultValue">&nbsp;</h5>
@@ -3005,21 +3618,29 @@
           <div class="collapse multi-collapse" id="NGCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="NGMoveStats"></span>, <strong>W:</strong><span
-                            id="NGWoundStats"></span></span>
-                        <span class="line2" id="NGStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="NGHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="NGEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="NGOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="NGSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="NGMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="NGWoundStats"></span></span>
+                          <span class="line2" id="NGStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="NGHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="NGEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="NGOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="NGStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="NGResultValue">&nbsp;</h5>
@@ -3037,35 +3658,44 @@
           <div class="collapse multi-collapse" id="SDCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="SDMoveStats"></span>, <strong>W:</strong><span
-                            id="SDWoundStats"></span></span>
-                        <span class="line2" id="SDStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="SDHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="SDEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="SDCoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="SDCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="SDOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
-                <div class="form-check">
-                  <input type="checkbox" class="form-check-input" name="" id="SDAwakened" value="SD">
-                  <label class="form-check-label" for="SDAwakened">
-                    Awakened
-                  </label>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="SDSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="SDMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="SDWoundStats"></span></span>
+                          <span class="line2" id="SDStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="SDHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="SDEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="SDCoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="SDCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="SDOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                  <!-- Check box here -->
+                  <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="" id="SDAwakened" value="SD">
+                    <label class="form-check-label" for="SDAwakened">
+                      Awakened
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="" id="enhancedAISD" value="SDAI">
+                    <label class="form-check-label" for="enhancedAISD">
+                      Enhanced Intelligence
+                    </label>
+                  </div>
                 </div>
-                <div class="form-check">
-                  <input type="checkbox" class="form-check-input" name="" id="enhancedAISD" value="SDAI">
-                  <label class="form-check-label" for="enhancedAISD">
-                    Enhanced Intelligence
-                  </label>
-                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="SDStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="SDResultValue">&nbsp;</h5>
@@ -3083,30 +3713,38 @@
           <div class="collapse multi-collapse" id="GDCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="GDMoveStats"></span>, <strong>W:</strong><span
-                            id="GDWoundStats"></span></span>
-                        <span class="line2" id="GDStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="GDHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="GDEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="GDCoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="GDCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="GDOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
-
-                <div class="form-check">
-                  <input type="checkbox" class="form-check-input" name="" id="enhancedAIGD" value="GD">
-                  <label class="form-check-label" for="enhancedAIGD">
-                    Enhanced Intelligence
-                  </label>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="GDSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="GDMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="GDWoundStats"></span></span>
+                          <span class="line2" id="GDStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="GDHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="GDEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="GDCoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="GDCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="GDOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                  <!-- Check box here -->
+                  <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="" id="enhancedAIGD" value="GD">
+                    <label class="form-check-label" for="enhancedAIGD">
+                      Enhanced Intelligence
+                    </label>
+                  </div>
                 </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="GDStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="GDResultValue">&nbsp;</h5>
@@ -3124,22 +3762,30 @@
           <div class="collapse multi-collapse" id="UGCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="UGMoveStats"></span>, <strong>W:</strong><span
-                            id="UGWoundStats"></span></span>
-                        <span class="line2" id="UGStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="UGHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="UGEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="UGCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="UGOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="UGSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="UGMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="UGWoundStats"></span></span>
+                          <span class="line2" id="UGStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="UGHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="UGEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="UGCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="UGOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="UGStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="UGResultValue">&nbsp;</h5>
@@ -3157,22 +3803,30 @@
           <div class="collapse multi-collapse" id="CBCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="CBMoveStats"></span>, <strong>W:</strong><span
-                            id="CBWoundStats"></span></span>
-                        <span class="line2" id="CBStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="CBHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="CBEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="CBCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="CBOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="CBSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="CBMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="CBWoundStats"></span></span>
+                          <span class="line2" id="CBStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="CBHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="CBEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="CBCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="CBOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="CBStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="CBResultValue">&nbsp;</h5>
@@ -3190,22 +3844,30 @@
           <div class="collapse multi-collapse" id="RPCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="RPMoveStats"></span>, <strong>W:</strong><span
-                            id="RPWoundStats"></span></span>
-                        <span class="line2" id="RPStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="RPHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="RPEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="RPCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="RPOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="RPSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="RPMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="RPWoundStats"></span></span>
+                          <span class="line2" id="RPStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="RPHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="RPEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="RPCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="RPOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="RPStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="RPResultValue">&nbsp;</h5>
@@ -3223,23 +3885,31 @@
           <div class="collapse multi-collapse" id="CSMCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="CSMMoveStats"></span>, <strong>W:</strong><span
-                            id="CSMWoundStats"></span></span>
-                        <span class="line2" id="CSMStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="CSMHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="CSMEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="CSMCoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="CSMCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="CSMOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="CSMSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="CSMMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="CSMWoundStats"></span></span>
+                          <span class="line2" id="CSMStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="CSMHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="CSMEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="CSMCoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="CSMCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="CSMOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="CSMStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="CSMResultValue">&nbsp;</h5>
@@ -3257,25 +3927,36 @@
           <div class="collapse multi-collapse" id="OMCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="OMMoveStats"></span>, <strong>W:</strong><span
-                            id="OMWoundStats"></span></span>
-                        <span class="line2" id="OMStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="OMHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="OMEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="OMCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="OMCoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="OMOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
-                <input type="checkbox" class="form-check-input" name="" id="OMEmpowered" value="OM">
-                Empowered
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="OMSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="OMMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="OMWoundStats"></span></span>
+                          <span class="line2" id="OMStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="OMHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="OMEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="OMCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="OMCoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="OMOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                  <!-- Check box here -->
+                  <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="" id="OMEmpowered" value="OM">
+                    Empowered
+                  </div>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="OMStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="OMResultValue">&nbsp;</h5>
@@ -3293,26 +3974,37 @@
           <div class="collapse multi-collapse" id="AMCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="AMMoveStats"></span>, <strong>W:</strong><span
-                            id="AMWoundStats"></span></span>
-                        <span class="line2" id="AMStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="AMHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="AMEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="AMCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary"
-                        id="AMProtectiveButton">Protective/Enraged</button>
-                      <button type="button" class="btn btn-secondary" id="AMOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
-                <input type="checkbox" class="form-check-input" id="AMCheckBox" value="AM">
-                Enraged
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="AMSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="AMMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="AMWoundStats"></span></span>
+                          <span class="line2" id="AMStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="AMHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="AMEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="AMCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary"
+                          id="AMProtectiveButton">Protective/Enraged</button>
+                        <button type="button" class="btn btn-secondary" id="AMOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                  <!-- Check box here -->
+                  <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="AMCheckBox" value="AM">
+                    Enraged
+                  </div>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="AMStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="AMResultValue">&nbsp;</h5>
@@ -3330,23 +4022,31 @@
           <div class="collapse multi-collapse" id="BICard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="BIMoveStats"></span>, <strong>W:</strong><span
-                            id="BIWoundStats"></span></span>
-                        <span class="line2" id="BIStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="BIHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="BIEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="BICoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="BICloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="BIOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="BISpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="BIMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="BIWoundStats"></span></span>
+                          <span class="line2" id="BIStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="BIHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="BIEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="BICoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="BICloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="BIOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="BIStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="BIResultValue">&nbsp;</h5>
@@ -3364,23 +4064,31 @@
           <div class="collapse multi-collapse" id="TCCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="TCMoveStats"></span>, <strong>W:</strong><span
-                            id="TCWoundStats"></span></span>
-                        <span class="line2" id="TCStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="TCHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="TCEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="TCCoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="TCCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="TCOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="TCSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="TCMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="TCWoundStats"></span></span>
+                          <span class="line2" id="TCStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="TCHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="TCEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="TCCoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="TCCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="TCOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="TCStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="TCResultValue">&nbsp;</h5>
@@ -3398,23 +4106,31 @@
           <div class="collapse multi-collapse" id="COCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="COMoveStats"></span>, <strong>W:</strong><span
-                            id="COWoundStats"></span></span>
-                        <span class="line2" id="COStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="COBodyguardButton">Bodyguard</button>
-                      <button type="button" class="btn btn-secondary" id="COHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="COEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="COCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="COOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="COSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="COMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="COWoundStats"></span></span>
+                          <span class="line2" id="COStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="COBodyguardButton">Bodyguard</button>
+                        <button type="button" class="btn btn-secondary" id="COHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="COEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="COCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="COOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="COStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="COResultValue">&nbsp;</h5>
@@ -3432,21 +4148,29 @@
           <div class="collapse multi-collapse" id="PWCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="PWMoveStats"></span>, <strong>W:</strong><span
-                            id="PWWoundStats"></span></span>
-                        <span class="line2" id="PWStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="PWHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="PWEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="PWOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="PWSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="PWMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="PWWoundStats"></span></span>
+                          <span class="line2" id="PWStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="PWHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="PWEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="PWOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="PWStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="PWResultValue">&nbsp;</h5>
@@ -3464,23 +4188,31 @@
           <div class="collapse multi-collapse" id="PMCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="PMMoveStats"></span>, <strong>W:</strong><span
-                            id="PMWoundStats"></span></span>
-                        <span class="line2" id="PMStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="PMHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="PMEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="PMCoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="PMCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="PMOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="PMSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="PMMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="PMWoundStats"></span></span>
+                          <span class="line2" id="PMStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="PMHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="PMEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="PMCoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="PMCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="PMOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="PMStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="PMResultValue">&nbsp;</h5>
@@ -3498,23 +4230,31 @@
           <div class="collapse multi-collapse" id="MOPCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="MOPMoveStats"></span>, <strong>W:</strong><span
-                            id="MOPWoundStats"></span></span>
-                        <span class="line2" id="MOPStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="MOPHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="MOPEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="MOPCoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="MOPCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="MOPOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="MOPSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="MOPMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="MOPWoundStats"></span></span>
+                          <span class="line2" id="MOPStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="MOPHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="MOPEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="MOPCoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="MOPCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="MOPOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="MOPStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="MOPResultValue">&nbsp;</h5>
@@ -3532,22 +4272,30 @@
           <div class="collapse multi-collapse" id="GPCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="GPMoveStats"></span>, <strong>W:</strong><span
-                            id="GPWoundStats"></span></span>
-                        <span class="line2" id="GPStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="GPHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="GPEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="GPCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="GPOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="GPSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="GPMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="GPWoundStats"></span></span>
+                          <span class="line2" id="GPStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="GPHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="GPEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="GPCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="GPOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="GPStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="GPResultValue">&nbsp;</h5>
@@ -3565,25 +4313,36 @@
           <div class="collapse multi-collapse" id="CLCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="CLMoveStats"></span>, <strong>W:</strong><span
-                            id="CLWoundStats"></span></span>
-                        <span class="line2" id="CLStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="CLHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="CLEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="CLCoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="CLCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="CLOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
-                <input type="checkbox" class="form-check-input" id="CLCheckBox" value="CL">
-                Rousing Figurehead Active
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="CLSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="CLMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="CLWoundStats"></span></span>
+                          <span class="line2" id="CLStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="CLHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="CLEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="CLCoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="CLCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="CLOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                  <!-- Check box here -->
+                  <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="CLCheckBox" value="CL">
+                    Rousing Figurehead Active
+                  </div>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="CLStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="CLResultValue">&nbsp;</h5>
@@ -3601,23 +4360,31 @@
           <div class="collapse multi-collapse" id="CFCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="CFMoveStats"></span>, <strong>W:</strong><span
-                            id="CFWoundStats"></span></span>
-                        <span class="line2" id="CFStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="CFHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="CFEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="CFCoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="CFCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="CFOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="CFSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="CFMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="CFWoundStats"></span></span>
+                          <span class="line2" id="CFStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="CFHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="CFEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="CFCoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="CFCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="CFOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="CFStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="CFResultValue">&nbsp;</h5>
@@ -3635,23 +4402,31 @@
           <div class="collapse multi-collapse" id="ARCCard">
             <div class="card text-center">
               <div class="card-header">
-                <ul class="nav nav-pills card-header-pills justify-content-center">
-                  <li class="nav-item">
-                    <div class="btn-group-sm" role="group" aria-label="Basic example">
-                      <!-- Add Stats line-->
-                      <span class="stats-display">
-                        <span><strong>M:</strong> <span id="ARCMoveStats"></span>, <strong>W:</strong><span
-                            id="ARCWoundStats"></span></span>
-                        <span class="line2" id="ARCStatline2"></span>
-                      </span>
-                      <button type="button" class="btn btn-secondary" id="ARCHiddenButton">Hidden</button>
-                      <button type="button" class="btn btn-secondary" id="ARCEngagedButton">Engaged</button>
-                      <button type="button" class="btn btn-secondary" id="ARCCoverButton">In Cover</button>
-                      <button type="button" class="btn btn-secondary" id="ARCCloseButton">Close</button>
-                      <button type="button" class="btn btn-secondary" id="ARCOtherButton">Other</button>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Special Rules list (Left side) -->
+                <div class="special-rules-list" id="ARCSpecialRules"></div>
+                <!-- Main panel (Middle) -->
+                <div class="mid-column">
+                  <ul class="nav nav-pills card-header-pills justify-content-center">
+                    <li class="nav-item">
+                      <div class="btn-group-sm" role="group" aria-label="Basic example">
+                        <!-- Add Stats line-->
+                        <span class="stats-display">
+                          <span><strong>Move: </strong><span id="ARCMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="ARCWoundStats"></span></span>
+                          <span class="line2" id="ARCStatline2"></span>
+                        </span>
+                        <!-- Activation buttons here -->
+                        <button type="button" class="btn btn-secondary" id="ARCHiddenButton">Hidden</button>
+                        <button type="button" class="btn btn-secondary" id="ARCEngagedButton">Engaged</button>
+                        <button type="button" class="btn btn-secondary" id="ARCCoverButton">In Cover</button>
+                        <button type="button" class="btn btn-secondary" id="ARCCloseButton">Close</button>
+                        <button type="button" class="btn btn-secondary" id="ARCOtherButton">Other</button>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <!-- stats matrix (right side) -->
+                <div class="stats-table" id="ARCStatsTable"></div>
               </div>
               <div class="card-body">
                 <h5 class="card-title" id="ARCResultValue">&nbsp;</h5>
