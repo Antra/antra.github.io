@@ -1999,17 +1999,19 @@
     name: "Master of Possession",
     id: "MOP",
     size: "Huge",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 10,
     statline2: "",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Force Stave and Bolt Pistol", cols: ["⬠", "△", "□"] }
       ],
-      specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
-      ]
+      specialRules: []
     },
+    specialRules: [
+      { key: 'Daemonkin', value: 'Roll the Blackstone dice each time a wound or grievous wound is suffered by a Greater Possessed. On a 17+, the wound or grievous wound is negated.' },
+      { key: 'Master Psyker', value: 'When a Master of Possession is activated, he takes two actions, one after the other. Roll on the behaviour table for his first action, then take it. Then roll on the behaviour table again for his second action, and then take it.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 20)
         return disruptResult;
@@ -2058,17 +2060,18 @@
     name: "Greater Possessed",
     id: "GP",
     size: "Huge",
-    move: "??",
-    wounds: "??",
+    move: 3,
+    wounds: 12,
     statline2: "",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Daemonic Mutations", cols: ["⬠⬠", "-", "-"] }
       ],
-      specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
-      ]
+      specialRules: []
     },
+    specialRules: [
+      { key: 'Daemonkin', value: 'Roll the Blackstone dice each time a wound or grievous wound is suffered by a Greater Possessed. On a 17+, the wound or grievous wound is negated.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return warpsurgeResult;
