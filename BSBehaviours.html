@@ -805,7 +805,7 @@
     // Update the UI
     $('#' + hostile.id + 'MoveStats').text(move);
     $('#' + hostile.id + 'WoundStats').text(wounds);
-    $('#' + hostile.id + 'Statline2').text(statline2);
+    $('#' + hostile.id + 'Statline2').html(formatCellHtml(statline2));
     $('#' + hostile.id + 'SizeStats').text(size);
 
     // Update tables
@@ -2252,17 +2252,51 @@
     name: "The Archivist",
     id: "ARC",
     size: "Huge",
-    move: "??",
+    move: 2,
     wounds: "??",
-    statline2: "",
+    statline2: "Defence: △, Agility: □, Vitality: △",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Atomic Disassembler(1)", cols: ["-", "⬠⬠△", "△△□"] },
+        { label: "Eradicator Glove(2)", cols: ["⬠⬠△", "-", "-"] }
       ],
       specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+        { key: 'Disintegrate(1)', value: 'The attack ignores cover.' },
+        { key: 'Mighty Strength(2)', value: 'When rolling for this attack action, pick two results instead of one and resolve them one at a time, resolving any successes before any critical successes.' },
       ]
     },
+    specialRules: [
+      { key: 'Matchless Intelligence', value: 'Do not treat the Archivist as an explorer during challenge exploration cards - it watches on with disinterest or uses it biological science to circumnavigate any perils. When a challenge card is turned face up, the leader can choose to lost 6 trust. If they can, and do, the challenge is treated as having been resolved - note that the explorers do not receive any potential rewards or penaltist from that challenge card.' },
+      { key: 'Malevolent Mind', value: 'Do not roll activation dice for the Archivist. Instead, it can take up to three of the following actions in any order and in any combination: Move, Atomic Disassembler, Eradicator Glove or Recuperate. The Archivist cannot be given any relics. ' },
+      { key: 'Huge', value: 'Other explorers cannot share a hex with this explorer.' },
+    ],
+    toggles: [
+      {
+        id: "ARCMistrustful",
+        label: "Mistrustful",
+        state: false,
+        default: false,
+        size: "Huge",
+        move: 2,
+        wounds: "??",
+        statline2: "Defence: △, Agility: □, Vitality: △",
+        statsMatrix: {
+          rows: [
+            { label: "Atomic Disassembler(1)", cols: ["-", "⬠⬠△", "△△□"] },
+            { label: "Eradicator Glove(2)", cols: ["⬠⬠△", "-", "-"] }
+          ],
+          specialRules: [
+            { key: 'Disintegrate(1)', value: 'The attack ignores cover.' },
+            { key: 'Mighty Strength(2)', value: 'When rolling for this attack action, pick two results instead of one and resolve them one at a time, resolving any successes before any critical successes.' },
+          ]
+        },
+        specialRules: [
+          { key: 'Malevolent Mind', value: 'When the Archivist is activated the leader must roll on the Archivist behaviour table instead of choosing its actions (see the Archivist trust card for this behaviour table). The Archivist cannot be given any relics.' },
+          { key: 'Huge', value: 'Other explorers cannot share a hex with this explorer.' },
+        ]
+
+      }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -3632,11 +3666,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="TGMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="TGWoundStats"></span>, <strong>Size: </strong><span id="TGSizeStats"></span></span>
-                          <span class="line2" id="TGStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="TGMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="TGWoundStats"></span>, <strong>Size: </strong><span id="TGSizeStats"></span></div>
+                          <div class="line2" id="TGStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="TGHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="TGEngagedButton">Engaged</button>
@@ -3682,11 +3716,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="NGMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="NGWoundStats"></span>, <strong>Size: </strong><span id="NGSizeStats"></span></span>
-                          <span class="line2" id="NGStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="NGMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="NGWoundStats"></span>, <strong>Size: </strong><span id="NGSizeStats"></span></div>
+                          <div class="line2" id="NGStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="NGHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="NGEngagedButton">Engaged</button>
@@ -3722,11 +3756,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="SDMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="SDWoundStats"></span>, <strong>Size: </strong><span id="SDSizeStats"></span></span>
-                          <span class="line2" id="SDStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="SDMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="SDWoundStats"></span>, <strong>Size: </strong><span id="SDSizeStats"></span></div>
+                          <div class="line2" id="SDStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="SDHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="SDEngagedButton">Engaged</button>
@@ -3779,11 +3813,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="GDMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="GDWoundStats"></span>, <strong>Size: </strong><span id="GDSizeStats"></span></span>
-                          <span class="line2" id="GDStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="GDMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="GDWoundStats"></span>, <strong>Size: </strong><span id="GDSizeStats"></span></div>
+                          <div class="line2" id="GDStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="GDHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="GDEngagedButton">Engaged</button>
@@ -3829,11 +3863,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="UGMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="UGWoundStats"></span>, <strong>Size: </strong><span id="UGSizeStats"></span></span>
-                          <span class="line2" id="UGStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="UGMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="UGWoundStats"></span>, <strong>Size: </strong><span id="UGSizeStats"></span></div>
+                          <div class="line2" id="UGStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="UGHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="UGEngagedButton">Engaged</button>
@@ -3870,11 +3904,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="CBMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="CBWoundStats"></span>, <strong>Size: </strong><span id="CBSizeStats"></span></span>
-                          <span class="line2" id="CBStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="CBMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="CBWoundStats"></span>, <strong>Size: </strong><span id="CBSizeStats"></span></div>
+                          <div class="line2" id="CBStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="CBHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="CBEngagedButton">Engaged</button>
@@ -3911,11 +3945,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="RPMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="RPWoundStats"></span>, <strong>Size: </strong><span id="RPSizeStats"></span></span>
-                          <span class="line2" id="RPStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="RPMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="RPWoundStats"></span>, <strong>Size: </strong><span id="RPSizeStats"></span></div>
+                          <div class="line2" id="RPStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="RPHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="RPEngagedButton">Engaged</button>
@@ -3952,11 +3986,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="CSMMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="CSMWoundStats"></span>, <strong>Size: </strong><span id="CSMSizeStats"></span></span>
-                          <span class="line2" id="CSMStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="CSMMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="CSMWoundStats"></span>, <strong>Size: </strong><span id="CSMSizeStats"></span></div>
+                          <div class="line2" id="CSMStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="CSMHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="CSMEngagedButton">Engaged</button>
@@ -3994,11 +4028,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="OMMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="OMWoundStats"></span>, <strong>Size: </strong><span id="OMSizeStats"></span></span>
-                          <span class="line2" id="OMStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="OMMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="OMWoundStats"></span>, <strong>Size: </strong><span id="OMSizeStats"></span></div>
+                          <div class="line2" id="OMStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="OMHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="OMEngagedButton">Engaged</button>
@@ -4044,11 +4078,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="AMMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="AMWoundStats"></span>, <strong>Size: </strong><span id="AMSizeStats"></span></span>
-                          <span class="line2" id="AMStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="AMMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="AMWoundStats"></span>, <strong>Size: </strong><span id="AMSizeStats"></span></div>
+                          <div class="line2" id="AMStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="AMHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="AMEngagedButton">Engaged</button>
@@ -4095,11 +4129,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="BIMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="BIWoundStats"></span>, <strong>Size: </strong><span id="BISizeStats"></span></span>
-                          <span class="line2" id="BIStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="BIMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="BIWoundStats"></span>, <strong>Size: </strong><span id="BISizeStats"></span></div>
+                          <div class="line2" id="BIStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="BIHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="BIEngagedButton">Engaged</button>
@@ -4137,11 +4171,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="TCMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="TCWoundStats"></span>, <strong>Size: </strong><span id="TCSizeStats"></span></span>
-                          <span class="line2" id="TCStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="TCMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="TCWoundStats"></span>, <strong>Size: </strong><span id="TCSizeStats"></span></div>
+                          <div class="line2" id="TCStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="TCHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="TCEngagedButton">Engaged</button>
@@ -4179,11 +4213,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="COMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="COWoundStats"></span>, <strong>Size: </strong><span id="COSizeStats"></span></span>
-                          <span class="line2" id="COStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="COMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="COWoundStats"></span>, <strong>Size: </strong><span id="COSizeStats"></span></div>
+                          <div class="line2" id="COStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="COBodyguardButton">Bodyguard</button>
                         <button type="button" class="btn btn-secondary" id="COHiddenButton">Hidden</button>
@@ -4221,11 +4255,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="PWMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="PWWoundStats"></span>, <strong>Size: </strong><span id="PWSizeStats"></span></span>
-                          <span class="line2" id="PWStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="PWMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="PWWoundStats"></span>, <strong>Size: </strong><span id="PWSizeStats"></span></div>
+                          <div class="line2" id="PWStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="PWHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="PWEngagedButton">Engaged</button>
@@ -4261,11 +4295,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="PMMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="PMWoundStats"></span>, <strong>Size: </strong><span id="PMSizeStats"></span></span>
-                          <span class="line2" id="PMStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="PMMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="PMWoundStats"></span>, <strong>Size: </strong><span id="PMSizeStats"></span></div>
+                          <div class="line2" id="PMStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="PMHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="PMEngagedButton">Engaged</button>
@@ -4303,11 +4337,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="MOPMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="MOPWoundStats"></span>, <strong>Size: </strong><span id="MOPSizeStats"></span></span>
-                          <span class="line2" id="MOPStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="MOPMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="MOPWoundStats"></span>, <strong>Size: </strong><span id="MOPSizeStats"></span></div>
+                          <div class="line2" id="MOPStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="MOPHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="MOPEngagedButton">Engaged</button>
@@ -4345,11 +4379,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="GPMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="GPWoundStats"></span>, <strong>Size: </strong><span id="GPSizeStats"></span></span>
-                          <span class="line2" id="GPStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="GPMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="GPWoundStats"></span>, <strong>Size: </strong><span id="GPSizeStats"></span></div>
+                          <div class="line2" id="GPStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="GPHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="GPEngagedButton">Engaged</button>
@@ -4386,11 +4420,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="CLMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="CLWoundStats"></span>, <strong>Size: </strong><span id="CLSizeStats"></span></span>
-                          <span class="line2" id="CLStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="CLMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="CLWoundStats"></span>, <strong>Size: </strong><span id="CLSizeStats"></span></div>
+                          <div class="line2" id="CLStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="CLHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="CLEngagedButton">Engaged</button>
@@ -4436,11 +4470,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="CFMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="CFWoundStats"></span>, <strong>Size: </strong><span id="CFSizeStats"></span></span>
-                          <span class="line2" id="CFStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="CFMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="CFWoundStats"></span>, <strong>Size: </strong><span id="CFSizeStats"></span></div>
+                          <div class="line2" id="CFStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="CFHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="CFEngagedButton">Engaged</button>
@@ -4478,11 +4512,11 @@
                     <li class="nav-item">
                       <div class="btn-group-sm" role="group" aria-label="Basic example">
                         <!-- Add Stats line-->
-                        <span class="stats-display">
-                          <span><strong>Move: </strong><span id="ARCMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="ARCWoundStats"></span>, <strong>Size: </strong><span id="ARCSizeStats"></span></span>
-                          <span class="line2" id="ARCStatline2"></span>
-                        </span>
+                        <div class="stats-display">
+                          <div><strong>Move: </strong><span id="ARCMoveStats"></span>, <strong>Wounds: </strong><span
+                              id="ARCWoundStats"></span>, <strong>Size: </strong><span id="ARCSizeStats"></span></div>
+                          <div class="line2" id="ARCStatline2"></div>
+                        </div>
                         <!-- Activation buttons here -->
                         <button type="button" class="btn btn-secondary" id="ARCHiddenButton">Hidden</button>
                         <button type="button" class="btn btn-secondary" id="ARCEngagedButton">Engaged</button>
@@ -4492,6 +4526,14 @@
                       </div>
                     </li>
                   </ul>
+                  <!-- Check box here -->
+                  <div class="form-check">
+                    <input type="checkbox" class="form-check-input hostile-toggle" name="" id="ARCMistrustful"
+                      data-hostile="archHostile" value="ARC">
+                    <label class="form-check-label" for="ARCMistrustful">
+                      Mistrustful
+                    </label>
+                  </div>
                 </div>
                 <!-- stats matrix (right side) -->
                 <div class="stats-table" id="ARCStatsTable"></div>
