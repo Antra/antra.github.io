@@ -667,6 +667,12 @@
     return esc;
   }
 
+  function getActiveToggle(hostile) {
+    if (!hostile || !hostile.toggles) return null;
+    // Return the first toggle with default === true
+    return hostile.toggles.find(t => t.default) || null;
+  }
+
   // Default stats matrix header
   var defaultStatsHeader = ["Weapon", "Range 1", "Range 2-3", "Range 4+"];
   // Build/populate the table in the container with id "<HOSTILE>StatsTable"
@@ -679,29 +685,30 @@
       return;
     }
 
-    // choose header: hostile override or default
-    var headerData = (hostile.statsMatrix && hostile.statsMatrix.header && hostile.statsMatrix.header.length)
-      ? hostile.statsMatrix.header.slice()
+
+    // Use the toggle's statsMatrix if active, otherwise the base statsMatrix
+    var activeToggle = getActiveToggle(hostile);
+    var statsMatrix = activeToggle?.statsMatrix || hostile.statsMatrix;
+
+    // choose header: statsMatrix override or default
+    var headerData = (statsMatrix && statsMatrix.header && statsMatrix.header.length)
+      ? statsMatrix.header.slice()
       : defaultStatsHeader.slice();
 
     // ensure at least 4 columns in header
-    if (headerData.length < 4) {
-      while (headerData.length < 4) headerData.push('');
-    }
+    while (headerData.length < 4) headerData.push('');
 
     var $table = $('<table/>').addClass('table table-sm mb-0');
     var $thead = $('<thead/>');
     var $hrow = $('<tr/>');
     headerData.forEach(function (h) {
-      // header cells may also contain (n) references, format them
       $hrow.append($('<th/>').html(formatCellHtml(h)));
     });
     $thead.append($hrow);
     $table.append($thead);
 
     var $tbody = $('<tbody/>');
-
-    var rows = (hostile.statsMatrix && hostile.statsMatrix.rows && hostile.statsMatrix.rows.length) ? hostile.statsMatrix.rows : null;
+    var rows = (statsMatrix && statsMatrix.rows && statsMatrix.rows.length) ? statsMatrix.rows : null;
 
     if (!rows) {
       // produce a single empty row if none provided
@@ -711,9 +718,7 @@
     } else {
       rows.forEach(function (row) {
         var $r = $('<tr/>');
-        // first (label) cell - format (superscripts etc)
         $r.append($('<td/>').html(formatCellHtml(row.label || '')));
-        // remaining cells (format with icons/superscripts)
         for (var c = 1; c < headerData.length; c++) {
           var rawCell = (row.cols && row.cols[c - 1] !== undefined) ? row.cols[c - 1] : '';
           $r.append($('<td/>').html(formatCellHtml(rawCell)));
@@ -725,21 +730,18 @@
 
     // prepare special rules block (clear old content first)
     var $special = $('<div/>').addClass('stats-special');
-    var specialRules = (hostile.statsMatrix && hostile.statsMatrix.specialRules && hostile.statsMatrix.specialRules.length) ? hostile.statsMatrix.specialRules : null;
+    var specialRules = (statsMatrix && statsMatrix.specialRules && statsMatrix.specialRules.length) ? statsMatrix.specialRules : null;
 
     if (specialRules && specialRules.length) {
       specialRules.forEach(function (rule) {
         var key = rule.key || '';
         var value = rule.value || '';
-        // format both key and value (superscripts + icons if present)
         var escKey = formatCellHtml(key);
         var escVal = formatCellHtml(value);
-        // whole line italic, key bold (and italic)
         var $row = $('<div/>').addClass('rule-row').html('<i><strong>' + escKey + '</strong>: ' + escVal + '</i>');
         $special.append($row);
       });
     } else {
-      // if no special rules, keep a single empty line so layout remains predictable
       $special.append($('<div/>').addClass('rule-row').html('<i></i>'));
     }
 
@@ -753,39 +755,62 @@
 
     // Find the target container
     var $container = $('#' + hostileId + 'SpecialRules');
-
-    // Clear any existing content
     $container.empty();
 
-    // Check if specialRules exist and are non-empty
-    if (hostile.specialRules && hostile.specialRules.length > 0) {
-      // Create the header
-      var $header = $('<h5>').text('Special Rules').css({
-        'font-weight': 'bold',
-        'margin-top': '10px'
-      });
 
-      // Create the list
-      var $list = $('<ul>').css({
-        'font-style': 'italic',
-        'margin-left': '20px',
-        'list-style-type': 'none',
-        'padding-left': '0',
-      });
+    // Use toggle's specialRules if available, otherwise the base specialRules
+    var activeToggle = getActiveToggle(hostile);
+    var specialRules = activeToggle?.specialRules || hostile.specialRules;
 
-      // Loop through all special rules
-      hostile.specialRules.forEach(function (rule) {
-        var $item = $('<li>');
-        var $key = $('<strong>').text(rule.key + ': ');
-        var $value = $('<span>').text(rule.value);
+    if (!specialRules || specialRules.length === 0) return;
 
-        $item.append($key).append($value);
-        $list.append($item);
-      });
+    // Create the header
+    var $header = $('<h5>').text('Special Rules').css({
+      'font-weight': 'bold',
+      'margin-top': '10px'
+    });
 
-      // Append everything to the container
-      $container.append($header).append($list);
-    }
+    // Create the list
+    var $list = $('<ul>').css({
+      'font-style': 'italic',
+      'margin-left': '20px',
+      'list-style-type': 'none',
+      'padding-left': '0',
+    });
+
+    // Loop through all special rules
+    specialRules.forEach(function (rule) {
+      var $item = $('<li>');
+      var $key = $('<strong>').text(rule.key + ': ');
+      var $value = $('<span>').text(rule.value);
+      $item.append($key).append($value);
+      $list.append($item);
+    });
+
+    // Append everything to the container
+    $container.append($header).append($list);
+  }
+
+  function updateHostileDisplay(hostile) {
+    if (!hostile) return;
+
+    var activeToggle = getActiveToggle(hostile);
+
+    // Use toggle values if active, otherwise base values
+    var move = activeToggle?.move ?? hostile.move;
+    var wounds = activeToggle?.wounds ?? hostile.wounds;
+    var statline2 = activeToggle?.statline2 ?? hostile.statline2;
+    var size = activeToggle?.size ?? hostile.size;
+
+    // Update the UI
+    $('#' + hostile.id + 'MoveStats').text(move);
+    $('#' + hostile.id + 'WoundStats').text(wounds);
+    $('#' + hostile.id + 'Statline2').text(statline2);
+    $('#' + hostile.id + 'SizeStats').text(size);
+
+    // Update tables
+    populateStatsMatrix(hostile);
+    populateSpecialRules(hostile);
   }
 
 
@@ -793,7 +818,7 @@
   var traitorGuardHostile = {
     name: "Traitor Guardsmen",
     id: "TG",
-    size: "SMALL",
+    size: "Small",
     move: 2,
     wounds: 2,
     statline2: "",
@@ -894,7 +919,7 @@
   var negavoltCultistHostile = {
     name: "Negavolt cultist",
     id: "NG",
-    size: "LARGE",
+    size: "Large",
     move: 3,
     wounds: 2,
     statline2: "",
@@ -942,7 +967,7 @@
   var spindleDroneHostile = {
     name: "Spindle Drone",
     id: "SD",
-    size: "SMALL",
+    size: "Small",
     move: 2,
     wounds: 2,
     statline2: "",
@@ -959,6 +984,32 @@
     },
     specialRules: [
       { key: 'Threat Level', value: 'The threat level for a combat starts at 0. It increases by 1 if an alert result is rolled on the Spindle Drone behaviour table. In addition, each time a Spindle Drone is slain, the threat level increases by 1. Keep track of the current threat level by placing placing a threat level coutner with the number corresponding to the current threat level besides the board. The threat level can never be higher than 3, and drops back to 0 at the end of the combat.' }
+    ],
+    toggles: [
+      {
+        id: "SDAwakened",
+        label: "Awakened",
+        state: false,
+        default: false,
+        size: "Small",
+        move: 3,
+        wounds: 2,
+        statline2: "",
+        statsMatrix: {
+          rows: [
+            { label: "Pulse: Threat Level 0(1)", cols: ["△", "△", "△"] },
+            { label: "Pulse: Threat Level 1(1)", cols: ["□□", "□□", "□□"] },
+            { label: "Pulse: Threat Level 2(1)", cols: ["⬠", "⬠", "⬠"] },
+            { label: "Pulse: Threat Level 3(1)", cols: ["△△", "△△", "△△"] },
+          ],
+          specialRules: [
+            { key: 'Spindle Drone Threat Level(1)', value: 'Use the Pulse weapon line on the chart that corresponds to the current threat level.' }
+          ]
+        },
+        specialRules: [
+          { key: 'Threat Level', value: 'The threat level for a combat starts at 0. It increases by 1 if an alert result is rolled on the Spindle Drone behaviour table. In addition, each time a Spindle Drone is slain, the threat level increases by 1. Keep track of the current threat level by placing placing a threat level coutner with the number corresponding to the current threat level besides the board. The threat level can never be higher than 3, and drops back to 0 at the end of the combat.' }
+        ]
+      }
     ],
     hiddenResult: function (rollResult) {
 
@@ -1077,7 +1128,7 @@
   var guardianDroneHostile = {
     name: "Guardian Drone",
     id: "GD",
-    size: "HUGE",
+    size: "Huge",
     move: "??",
     wounds: "??",
     statline2: "",
@@ -1141,7 +1192,7 @@
   var urGhulHostile = {
     name: "Ur-Ghul",
     id: "UG",
-    size: "SMALL",
+    size: "Small",
     move: 3,
     wounds: 3,
     statline2: "",
@@ -1208,7 +1259,7 @@
   var chaosBeastmanHostile = {
     name: "Chaos Beastman",
     id: "CB",
-    size: "LARGE",
+    size: "Large",
     move: 2,
     wounds: 3,
     statline2: "",
@@ -1262,7 +1313,7 @@
   var roguePsykerHostile = {
     name: "Rogue Psyker",
     id: "RP",
-    size: "LARGE",
+    size: "Large",
     move: 2,
     wounds: 2,
     statline2: "",
@@ -1330,7 +1381,7 @@
   var chaosSpaceMarineHostile = {
     name: "Chaos Space Marine",
     id: "CSM",
-    size: "LARGE",
+    size: "Large",
     move: 2,
     wounds: 4,
     statline2: "",
@@ -1392,7 +1443,7 @@
   var obsidiusMallexHostile = {
     name: "Obsidius Mallex",
     id: "OM",
-    size: "HUGE",
+    size: "Huge",
     move: 2,
     wounds: 12,
     statline2: "",
@@ -1481,18 +1532,49 @@
   var ambullHostile = {
     name: "Ambull",
     id: "AM",
-    size: "HUGE",
-    move: "??",
-    wounds: "??",
+    size: "Huge",
+    move: 3,
+    wounds: 16,
     statline2: "",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Enormous Mandibles and Claws(1)", cols: ["△△", "-", "-"] }
       ],
       specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+        { key: 'Eviscerating Blows(1)', value: 'Each time an explorer or hostile suffers a wound or grievous wound from Enormous Mandibles and Claws, they also suffer an additional wound.' }
       ]
     },
+    specialRules: [
+      { key: 'Hulking Creature', value: 'When the Ambull is activated, it takes two actions, one after the other. Roll on the behaviour table for the first action, then take it. Then roll on the behaviour table again for the second action, and then take it. In addition, the Ambull never has to halt if it moves into a hex that is adjacent to an enemy.' },
+      { key: 'Symbiotic Healing', value: 'When the Ambull is activated, if it has any wound counters next to it, remove 1 wounder counter. If it has no wound counters, but does have a grievous wound counter next to it, instead remove 1 grievous wound counter.' },
+      { key: 'Driven Off', value: 'Once the damage caused to the Ambull equals or exceeds it Wounds value, the Ambull tunnels away to recover from its wounds, and is removed from play. Place the Ambull location marker on the hex the model was removed from. For all rules purposes, the Ambull is treated as having been slain. If the Ambull is returned as a result of a reinforcement roll, instead of being deployed adjacent to a portal, it must be deployed as close as possible to the Ambull location marker. The Ambull location marker is then removed.' },
+      { key: 'Tenacious', value: 'You can return the Ambull to the board on a reinforcement roll of 1, 2, or 3, instead of just 1.' }
+    ],
+    toggles: [
+      {
+        id: "AMCheckBox",
+        label: "Enraged",
+        state: false,
+        default: false,
+        size: "Huge",
+        move: 3,
+        wounds: 24,
+        statline2: "",
+        statsMatrix: {
+          rows: [
+            { label: "Enormous Mandibles and Claws(1)", cols: ["⬠⬠", "-", "-"] }
+          ],
+          specialRules: [
+            { key: 'Eviscerating Blows(1)', value: 'Each time an explorer or hostile suffers a wound or grievous wound from Enormous Mandibles and Claws, they also suffer an additional wound.' }
+          ]
+        },
+        specialRules: [
+          { key: 'Hulking Creature', value: 'When the Ambull is activated, it takes two actions, one after the other. Roll on the behaviour table for the first action, then take it. Then roll on the behaviour table again for the second action, and then take it. In addition, the Ambull never has to halt if it moves into a hex that is adjacent to an enemy.' },
+          { key: 'Symbiotic Healing', value: 'When the Ambull is activated, if it has any wound counters next to it, remove 1 wounder counter. If it has no wound counters, but does have a grievous wound counter next to it, instead remove 1 grievous wound counter.' },
+          { key: 'Protective', value: 'The Ambull always treats an explorer carrying an Ambull egg as the closest explorer.' }
+        ],
+      }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -1549,7 +1631,7 @@
   var borewyrmInfestationHostile = {
     name: "Borewyrm Infestation",
     id: "BI",
-    size: "SMALL",
+    size: "Small",
     move: "??",
     wounds: "??",
     statline2: "",
@@ -1621,7 +1703,7 @@
   var traitorCommissarHostile = {
     name: "Traitor Commissar",
     id: "TC",
-    size: "LARGE",
+    size: "Large",
     move: "??",
     wounds: "??",
     statline2: "",
@@ -1687,7 +1769,7 @@
   var chaosOgrynHostile = {
     name: "Chaos Ogryn",
     id: "CO",
-    size: "HUGE",
+    size: "Huge",
     move: "??",
     wounds: "??",
     statline2: "",
@@ -1757,7 +1839,7 @@
   var poxwalkerHostile = {
     name: "Poxwalker",
     id: "CO",
-    size: "SMALL",
+    size: "Small",
     move: "??",
     wounds: "??",
     statline2: "",
@@ -1800,7 +1882,7 @@
   var plagueMarineHostile = {
     name: "Plague Marine",
     id: "PM",
-    size: "LARGE",
+    size: "Large",
     move: "??",
     wounds: "??",
     statline2: "",
@@ -1860,7 +1942,7 @@
   var masterOfPossessionHostile = {
     name: "Master of Possession",
     id: "MOP",
-    size: "HUGE",
+    size: "Huge",
     move: "??",
     wounds: "??",
     statline2: "",
@@ -1919,7 +2001,7 @@
   var greaterPossessedHostile = {
     name: "Greater Possessed",
     id: "GP",
-    size: "HUGE",
+    size: "Huge",
     move: "??",
     wounds: "??",
     statline2: "",
@@ -1969,7 +2051,7 @@
   var cultistHostile = {
     name: "Cultists",
     id: "CL",
-    size: "SMALL",
+    size: "Small",
     move: "??",
     wounds: "??",
     statline2: "",
@@ -2034,7 +2116,7 @@
   var cultistFirebrandHostile = {
     name: "Cultist Firebrand",
     id: "CF",
-    size: "LARGE",
+    size: "Large",
     move: "??",
     wounds: "??",
     statline2: "",
@@ -2099,7 +2181,7 @@
   var archHostile = {
     name: "The Archivist",
     id: "ARC",
-    size: "HUGE",
+    size: "Huge",
     move: "??",
     wounds: "??",
     statline2: "",
@@ -2414,14 +2496,36 @@
         }
       )
 
+      // Generic listener for all hostile toggles
+      $(document).on('change', '.hostile-toggle', function () {
+        var $checkbox = $(this);
+        var toggleId = $checkbox.attr('id');
+        var hostileId = $checkbox.data('hostile');
+
+        // Get the hostile object (assumes you have a way to access by ID)
+        var hostile = window[hostileId]; // e.g., spindleDroneHostile stored as global
+        if (!hostile) {
+          console.warn('Hostile not found for ID', hostileId);
+          return;
+        }
+
+        // Find the toggle inside the hostile
+        var toggle = hostile.toggles?.find(t => t.id === toggleId);
+        if (!toggle) {
+          console.warn('Toggle not found:', toggleId, 'for hostile', hostileId);
+          return;
+        }
+
+        // Update the toggle state
+        toggle.default = $checkbox.is(':checked');
+
+        // Refresh the UI
+        updateHostileDisplay(hostile);
+      });
+
+
       //GUARDSMEN
-      $('#TGMoveStats').text(traitorGuardHostile.move);
-      $('#TGWoundStats').text(traitorGuardHostile.wounds);
-      if (traitorGuardHostile.statline2) {
-        $('#TGStatline2').text(traitorGuardHostile.statline2);
-      }
-      populateStatsMatrix(traitorGuardHostile);
-      populateSpecialRules(traitorGuardHostile);
+      updateHostileDisplay(traitorGuardHostile);
 
       $('#TGHiddenButton').click(
 
@@ -2494,13 +2598,7 @@
       })
 
       //NEGAVOLT
-      $('#NGMoveStats').text(negavoltCultistHostile.move);
-      $('#NGWoundStats').text(negavoltCultistHostile.wounds);
-      if (negavoltCultistHostile.statline2) {
-        $('#NGStatline2').text(negavoltCultistHostile.statline2);
-      }
-      populateStatsMatrix(negavoltCultistHostile);
-      populateSpecialRules(negavoltCultistHostile);
+      updateHostileDisplay(negavoltCultistHostile);
 
 
       $('#NGHiddenButton').click(
@@ -2530,13 +2628,7 @@
 
 
       //Spindle Drones
-      $('#SDMoveStats').text(spindleDroneHostile.move);
-      $('#SDWoundStats').text(spindleDroneHostile.wounds);
-      if (spindleDroneHostile.statline2) {
-        $('#SDStatline2').text(spindleDroneHostile.statline2);
-      }
-      populateStatsMatrix(spindleDroneHostile);
-      populateSpecialRules(spindleDroneHostile);
+      updateHostileDisplay(spindleDroneHostile);
 
       $('#SDHiddenButton').click(
 
@@ -2606,13 +2698,7 @@
       })
 
       //Guardian Drone
-      $('#GDMoveStats').text(guardianDroneHostile.move);
-      $('#GDWoundStats').text(guardianDroneHostile.wounds);
-      if (guardianDroneHostile.statline2) {
-        $('#GDStatline2').text(guardianDroneHostile.statline2);
-      }
-      populateStatsMatrix(guardianDroneHostile);
-      populateSpecialRules(guardianDroneHostile);
+      updateHostileDisplay(guardianDroneHostile);
 
       $('#GDHiddenButton').click(
 
@@ -2656,13 +2742,7 @@
       })
 
       //Ur-Ghuls
-      $('#UGMoveStats').text(urGhulHostile.move);
-      $('#UGWoundStats').text(urGhulHostile.wounds);
-      if (urGhulHostile.statline2) {
-        $('#UGStatline2').text(urGhulHostile.statline2);
-      }
-      populateStatsMatrix(urGhulHostile);
-      populateSpecialRules(urGhulHostile);
+      updateHostileDisplay(urGhulHostile);
 
       $('#UGHiddenButton').click(
 
@@ -2698,13 +2778,7 @@
       })
 
       //Chaos Beastman
-      $('#CBMoveStats').text(chaosBeastmanHostile.move);
-      $('#CBWoundStats').text(chaosBeastmanHostile.wounds);
-      if (chaosBeastmanHostile.statline2) {
-        $('#CBStatline2').text(chaosBeastmanHostile.statline2);
-      }
-      populateStatsMatrix(chaosBeastmanHostile);
-      populateSpecialRules(chaosBeastmanHostile);
+      updateHostileDisplay(chaosBeastmanHostile);
 
       $('#CBHiddenButton').click(
 
@@ -2740,13 +2814,7 @@
       })
 
       //Rogue Psyker
-      $('#RPMoveStats').text(roguePsykerHostile.move);
-      $('#RPWoundStats').text(roguePsykerHostile.wounds);
-      if (roguePsykerHostile.statline2) {
-        $('#RPStatline2').text(roguePsykerHostile.statline2);
-      }
-      populateStatsMatrix(roguePsykerHostile);
-      populateSpecialRules(roguePsykerHostile);
+      updateHostileDisplay(roguePsykerHostile);
 
       $('#RPHiddenButton').click(
 
@@ -2782,13 +2850,7 @@
       })
 
       //Chaos Space Marines
-      $('#CSMMoveStats').text(chaosSpaceMarineHostile.move);
-      $('#CSMWoundStats').text(chaosSpaceMarineHostile.wounds);
-      if (chaosSpaceMarineHostile.statline2) {
-        $('#CSMStatline2').text(chaosSpaceMarineHostile.statline2);
-      }
-      populateStatsMatrix(chaosSpaceMarineHostile);
-      populateSpecialRules(chaosSpaceMarineHostile);
+      updateHostileDisplay(chaosSpaceMarineHostile);
 
       $('#CSMHiddenButton').click(
 
@@ -2831,13 +2893,7 @@
       })
 
       //Obsidius Mallex
-      $('#OMMoveStats').text(obsidiusMallexHostile.move);
-      $('#OMWoundStats').text(obsidiusMallexHostile.wounds);
-      if (obsidiusMallexHostile.statline2) {
-        $('#OMStatline2').text(obsidiusMallexHostile.statline2);
-      }
-      populateStatsMatrix(obsidiusMallexHostile);
-      populateSpecialRules(obsidiusMallexHostile);
+      updateHostileDisplay(obsidiusMallexHostile);
 
       $('#OMHiddenButton').click(
 
@@ -2881,13 +2937,7 @@
 
 
       //Ambull
-      $('#AMMoveStats').text(ambullHostile.move);
-      $('#AMWoundStats').text(ambullHostile.wounds);
-      if (ambullHostile.statline2) {
-        $('#AMStatline2').text(ambullHostile.statline2);
-      }
-      populateStatsMatrix(ambullHostile);
-      populateSpecialRules(ambullHostile);
+      updateHostileDisplay(ambullHostile);
 
       $('#AMHiddenButton').click(
 
@@ -2930,13 +2980,7 @@
       })
 
       //Borewyrm Infestation
-      $('#BIMoveStats').text(borewyrmInfestationHostile.move);
-      $('#BIWoundStats').text(borewyrmInfestationHostile.wounds);
-      if (borewyrmInfestationHostile.statline2) {
-        $('#BIStatline2').text(borewyrmInfestationHostile.statline2);
-      }
-      populateStatsMatrix(borewyrmInfestationHostile);
-      populateSpecialRules(borewyrmInfestationHostile);
+      updateHostileDisplay(borewyrmInfestationHostile);
 
       $('#BIHiddenButton').click(
 
@@ -2979,13 +3023,7 @@
       })
 
       //Traitor Commissar
-      $('#TCMoveStats').text(traitorCommissarHostile.move);
-      $('#TCWoundStats').text(traitorCommissarHostile.wounds);
-      if (traitorCommissarHostile.statline2) {
-        $('#TCStatline2').text(traitorCommissarHostile.statline2);
-      }
-      populateStatsMatrix(traitorCommissarHostile);
-      populateSpecialRules(traitorCommissarHostile);
+      updateHostileDisplay(traitorCommissarHostile);
 
 
       $('#TCHiddenButton').click(
@@ -3029,13 +3067,7 @@
       })
 
       //Chaos Ogryn
-      $('#COMoveStats').text(chaosOgrynHostile.move);
-      $('#COWoundStats').text(chaosOgrynHostile.wounds);
-      if (chaosOgrynHostile.statline2) {
-        $('#COStatline2').text(chaosOgrynHostile.statline2);
-      }
-      populateStatsMatrix(chaosOgrynHostile);
-      populateSpecialRules(chaosOgrynHostile);
+      updateHostileDisplay(chaosOgrynHostile);
 
       $('#COHiddenButton').click(
 
@@ -3078,13 +3110,7 @@
       })
 
       //Poxwalker
-      $('#PWMoveStats').text(poxwalkerHostile.move);
-      $('#PWWoundStats').text(poxwalkerHostile.wounds);
-      if (poxwalkerHostile.statline2) {
-        $('#PWStatline2').text(poxwalkerHostile.statline2);
-      }
-      populateStatsMatrix(poxwalkerHostile);
-      populateSpecialRules(poxwalkerHostile);
+      updateHostileDisplay(poxwalkerHostile);
 
       $('#PWHiddenButton').click(
 
@@ -3113,13 +3139,7 @@
       })
 
       //Plague Marines
-      $('#PMMoveStats').text(plagueMarineHostile.move);
-      $('#PMWoundStats').text(plagueMarineHostile.wounds);
-      if (plagueMarineHostile.statline2) {
-        $('#PMStatline2').text(plagueMarineHostile.statline2);
-      }
-      populateStatsMatrix(plagueMarineHostile);
-      populateSpecialRules(plagueMarineHostile);
+      updateHostileDisplay(plagueMarineHostile);
 
       $('#PMHiddenButton').click(
 
@@ -3162,13 +3182,7 @@
       })
 
       //Master of Possession
-      $('#MOPMoveStats').text(masterOfPossessionHostile.move);
-      $('#MOPWoundStats').text(masterOfPossessionHostile.wounds);
-      if (masterOfPossessionHostile.statline2) {
-        $('#MOPStatline2').text(masterOfPossessionHostile.statline2);
-      }
-      populateStatsMatrix(masterOfPossessionHostile);
-      populateSpecialRules(masterOfPossessionHostile);
+      updateHostileDisplay(masterOfPossessionHostile);
 
       $('#MOPHiddenButton').click(
 
@@ -3211,13 +3225,7 @@
       })
 
       //GREATER POSSESSED
-      $('#GPMoveStats').text(greaterPossessedHostile.move);
-      $('#GPWoundStats').text(greaterPossessedHostile.wounds);
-      if (greaterPossessedHostile.statline2) {
-        $('#GPStatline2').text(greaterPossessedHostile.statline2);
-      }
-      populateStatsMatrix(greaterPossessedHostile);
-      populateSpecialRules(greaterPossessedHostile);
+      updateHostileDisplay(greaterPossessedHostile);
 
       $('#GPHiddenButton').click(
 
@@ -3253,13 +3261,7 @@
       })
 
       //Cultists
-      $('#CLMoveStats').text(cultistHostile.move);
-      $('#CLWoundStats').text(cultistHostile.wounds);
-      if (cultistHostile.statline2) {
-        $('#CLStatline2').text(cultistHostile.statline2);
-      }
-      populateStatsMatrix(cultistHostile);
-      populateSpecialRules(cultistHostile);
+      updateHostileDisplay(cultistHostile);
 
       $('#CLHiddenButton').click(
 
@@ -3319,13 +3321,7 @@
       })
 
       //Cultist Firebrand
-      $('#CFMoveStats').text(cultistFirebrandHostile.move);
-      $('#CFWoundStats').text(cultistFirebrandHostile.wounds);
-      if (cultistFirebrandHostile.statline2) {
-        $('#CFStatline2').text(cultistFirebrandHostile.statline2);
-      }
-      populateStatsMatrix(cultistFirebrandHostile);
-      populateSpecialRules(cultistFirebrandHostile);
+      updateHostileDisplay(cultistFirebrandHostile);
 
       $('#CFHiddenButton').click(
 
@@ -3368,13 +3364,7 @@
       })
 
       // The ARCH***
-      $('#ARCMoveStats').text(archHostile.move);
-      $('#ARCWoundStats').text(archHostile.wounds);
-      if (archHostile.statline2) {
-        $('#ARCStatline2').text(archHostile.statline2);
-      }
-      populateStatsMatrix(archHostile);
-      populateSpecialRules(archHostile);
+      updateHostileDisplay(archHostile);
 
       $('#ARCHiddenButton').click(
 
@@ -3415,9 +3405,6 @@
         $('#ARCResultDescr').text("");
         $('#ARCCheckBox').prop("checked", false);
       })
-
-
-
 
 
       $('#resetHostilesButton').click(
@@ -3579,7 +3566,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="TGMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="TGWoundStats"></span></span>
+                              id="TGWoundStats"></span>, <strong>Size: </strong><span id="TGSizeStats"></span></span>
                           <span class="line2" id="TGStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -3593,7 +3580,8 @@
                   </ul>
                   <!-- Check box here -->
                   <div class="form-check">
-                    <input type="checkbox" class="form-check-input" name="" id="TGCheckBox" value="TG">
+                    <input type="checkbox" class="form-check-input hostile-toggle" name="" id="TGCheckBox"
+                      data-hostile="traitorGuardHostile" value="TG">
                     <label class="form-check-label" for="TGCheckBox">
                       Traitor Commissar Motivation Active
                     </label>
@@ -3628,7 +3616,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="NGMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="NGWoundStats"></span></span>
+                              id="NGWoundStats"></span>, <strong>Size: </strong><span id="NGSizeStats"></span></span>
                           <span class="line2" id="NGStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -3668,7 +3656,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="SDMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="SDWoundStats"></span></span>
+                              id="SDWoundStats"></span>, <strong>Size: </strong><span id="SDSizeStats"></span></span>
                           <span class="line2" id="SDStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -3682,13 +3670,15 @@
                   </ul>
                   <!-- Check box here -->
                   <div class="form-check">
-                    <input type="checkbox" class="form-check-input" name="" id="SDAwakened" value="SD">
+                    <input type="checkbox" class="form-check-input hostile-toggle" name="" id="SDAwakened"
+                      data-hostile="spindleDroneHostile" value="SD">
                     <label class="form-check-label" for="SDAwakened">
                       Awakened
                     </label>
                   </div>
                   <div class="form-check">
-                    <input type="checkbox" class="form-check-input" name="" id="enhancedAISD" value="SDAI">
+                    <input type="checkbox" class="form-check-input hostile-toggle" name="" id="enhancedAISD"
+                      data-hostile="spindleDroneHostile" value="SDAI">
                     <label class="form-check-label" for="enhancedAISD">
                       Enhanced Intelligence
                     </label>
@@ -3723,7 +3713,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="GDMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="GDWoundStats"></span></span>
+                              id="GDWoundStats"></span>, <strong>Size: </strong><span id="GDSizeStats"></span></span>
                           <span class="line2" id="GDStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -3737,7 +3727,8 @@
                   </ul>
                   <!-- Check box here -->
                   <div class="form-check">
-                    <input type="checkbox" class="form-check-input" name="" id="enhancedAIGD" value="GD">
+                    <input type="checkbox" class="form-check-input hostile-toggle" name="" id="enhancedAIGD"
+                      data-hostile="guardianDroneHostile" value="GD">
                     <label class="form-check-label" for="enhancedAIGD">
                       Enhanced Intelligence
                     </label>
@@ -3772,7 +3763,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="UGMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="UGWoundStats"></span></span>
+                              id="UGWoundStats"></span>, <strong>Size: </strong><span id="UGSizeStats"></span></span>
                           <span class="line2" id="UGStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -3813,7 +3804,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="CBMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="CBWoundStats"></span></span>
+                              id="CBWoundStats"></span>, <strong>Size: </strong><span id="CBSizeStats"></span></span>
                           <span class="line2" id="CBStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -3854,7 +3845,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="RPMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="RPWoundStats"></span></span>
+                              id="RPWoundStats"></span>, <strong>Size: </strong><span id="RPSizeStats"></span></span>
                           <span class="line2" id="RPStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -3895,7 +3886,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="CSMMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="CSMWoundStats"></span></span>
+                              id="CSMWoundStats"></span>, <strong>Size: </strong><span id="CSMSizeStats"></span></span>
                           <span class="line2" id="CSMStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -3937,7 +3928,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="OMMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="OMWoundStats"></span></span>
+                              id="OMWoundStats"></span>, <strong>Size: </strong><span id="OMSizeStats"></span></span>
                           <span class="line2" id="OMStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -3951,7 +3942,8 @@
                   </ul>
                   <!-- Check box here -->
                   <div class="form-check">
-                    <input type="checkbox" class="form-check-input" name="" id="OMEmpowered" value="OM">
+                    <input type="checkbox" class="form-check-input hostile-toggle" name="" id="OMEmpowered"
+                      data-hostile="obsidiusMallexHostile" value="OM">
                     Empowered
                   </div>
                 </div>
@@ -3984,7 +3976,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="AMMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="AMWoundStats"></span></span>
+                              id="AMWoundStats"></span>, <strong>Size: </strong><span id="AMSizeStats"></span></span>
                           <span class="line2" id="AMStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -3999,8 +3991,11 @@
                   </ul>
                   <!-- Check box here -->
                   <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="AMCheckBox" value="AM">
-                    Enraged
+                    <input type="checkbox" class="form-check-input hostile-toggle" id="AMCheckBox"
+                      data-hostile="ambullHostile" value="AM">
+                    <label class="form-check-label" for="AMCheckBox">
+                      Enraged
+                    </label>
                   </div>
                 </div>
                 <!-- stats matrix (right side) -->
@@ -4032,7 +4027,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="BIMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="BIWoundStats"></span></span>
+                              id="BIWoundStats"></span>, <strong>Size: </strong><span id="BISizeStats"></span></span>
                           <span class="line2" id="BIStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -4074,7 +4069,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="TCMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="TCWoundStats"></span></span>
+                              id="TCWoundStats"></span>, <strong>Size: </strong><span id="TCSizeStats"></span></span>
                           <span class="line2" id="TCStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -4116,7 +4111,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="COMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="COWoundStats"></span></span>
+                              id="COWoundStats"></span>, <strong>Size: </strong><span id="COSizeStats"></span></span>
                           <span class="line2" id="COStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -4158,7 +4153,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="PWMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="PWWoundStats"></span></span>
+                              id="PWWoundStats"></span>, <strong>Size: </strong><span id="PWSizeStats"></span></span>
                           <span class="line2" id="PWStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -4198,7 +4193,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="PMMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="PMWoundStats"></span></span>
+                              id="PMWoundStats"></span>, <strong>Size: </strong><span id="PMSizeStats"></span></span>
                           <span class="line2" id="PMStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -4240,7 +4235,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="MOPMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="MOPWoundStats"></span></span>
+                              id="MOPWoundStats"></span>, <strong>Size: </strong><span id="MOPSizeStats"></span></span>
                           <span class="line2" id="MOPStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -4282,7 +4277,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="GPMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="GPWoundStats"></span></span>
+                              id="GPWoundStats"></span>, <strong>Size: </strong><span id="GPSizeStats"></span></span>
                           <span class="line2" id="GPStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -4323,7 +4318,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="CLMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="CLWoundStats"></span></span>
+                              id="CLWoundStats"></span>, <strong>Size: </strong><span id="CLSizeStats"></span></span>
                           <span class="line2" id="CLStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -4337,7 +4332,8 @@
                   </ul>
                   <!-- Check box here -->
                   <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="CLCheckBox" value="CL">
+                    <input type="checkbox" class="form-check-input hostile-toggle" id="CLCheckBox"
+                      data-hostile="cultistHostile" value="CL">
                     Rousing Figurehead Active
                   </div>
                 </div>
@@ -4370,7 +4366,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="CFMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="CFWoundStats"></span></span>
+                              id="CFWoundStats"></span>, <strong>Size: </strong><span id="CFSizeStats"></span></span>
                           <span class="line2" id="CFStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
@@ -4412,7 +4408,7 @@
                         <!-- Add Stats line-->
                         <span class="stats-display">
                           <span><strong>Move: </strong><span id="ARCMoveStats"></span>, <strong>Wounds: </strong><span
-                              id="ARCWoundStats"></span></span>
+                              id="ARCWoundStats"></span>, <strong>Size: </strong><span id="ARCSizeStats"></span></span>
                           <span class="line2" id="ARCStatline2"></span>
                         </span>
                         <!-- Activation buttons here -->
