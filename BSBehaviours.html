@@ -90,7 +90,7 @@
     /* keep the table at top of the stats-table and allow the special rules to scroll */
     .stats-table table {
       width: 100%;
-      max-height: 160px;
+      max-height: 200px;
       /* prevent table from growing indefinitely */
       overflow: visible;
       /* table shows fully; if it gets tall, special rules area will scroll */
@@ -781,8 +781,8 @@
     // Loop through all special rules
     specialRules.forEach(function (rule) {
       var $item = $('<li>');
-      var $key = $('<strong>').text(rule.key + ': ');
-      var $value = $('<span>').text(rule.value);
+      var $key = $('<strong>').html(formatCellHtml(rule.key + ': '));
+      var $value = $('<span>').html(formatCellHtml(rule.value));
       $item.append($key).append($value);
       $list.append($item);
     });
@@ -1129,17 +1129,22 @@
     name: "Guardian Drone",
     id: "GD",
     size: "Huge",
-    move: "??",
-    wounds: "??",
+    move: 3,
+    wounds: 18,
     statline2: "",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Destroyer Pulse", cols: ["-", "△△", "-"] },
+        { label: "Manipulator Limb", cols: ["⬠⬠", "-", "-"] },
+        { label: "Salvo Launchers(1)", cols: ["-", "-", "⬠"] }
       ],
       specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+        { key: 'Blast(1)', value: 'Ignore cover. In addition, make an attack roll that ignores cover against each explorer in the same hex as the target.' }
       ]
     },
+    specialRules: [
+      { key: 'Commander', value: 'If a combat includes any Guardian Drones, the threat level for that combat is 3. It drops back to 0 at the end of the combat.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 7)
         return hoverdronesResult;
@@ -1460,6 +1465,31 @@
     specialRules: [
       { key: 'Lord of War', value: 'When Obsidius Mallex is activated, he takes two actions, one after the other. Roll on the behaviour table for his first action, and then take it. Then roll on the behaviour table again for his second action, and then take it.' }
     ],
+    toggles: [
+      {
+        id: "OMEmpowered",
+        label: "Empowered",
+        state: false,
+        default: false,
+        size: "Huge",
+        move: 3,
+        wounds: 18,
+        statline2: "",
+        statsMatrix: {
+          rows: [
+            { label: "Daemonbound Hammer(1)", cols: ["⬠⬠", "-", "-"] },
+            { label: "Plasma Pistol(2)", cols: ["-", "⬠", "△"] }
+          ],
+          specialRules: [
+            { key: 'Soulcrushing Blow(1)', value: 'If two critical successes are rolled for an attack made with the Daemonbound Hammer, the target of that attack suffers an additional grievous wound. In addition, no defence roll can be made against a Daemonbound Hammer attack.' },
+            { key: 'Overcharge(2)', value: 'No defense roll can be made against an overcharged Plasma Pistol attack.' }
+          ]
+        },
+        specialRules: [
+          { key: 'Lord of War', value: 'When Obsidius Mallex is activated, he takes two actions, one after the other. Roll on the behaviour table for his first action, and then take it. Then roll on the behaviour table again for his second action, and then take it.' }
+        ]
+      }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4) {
 
@@ -1632,17 +1662,21 @@
     name: "Borewyrm Infestation",
     id: "BI",
     size: "Small",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 3,
     statline2: "",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Vicious Jaws(1)", cols: ["□", "-", "-"] }
       ],
       specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+        { key: 'Swarming(1)', value: 'When a Borewurm Infestation attacks, make three attack rolls. Carry out each attack one at a time, one after the other. The taget chosen for the second and third attacks must either be the same as the target of the previous attack, or in the same hex as the target of the previous attack.' }
       ]
     },
+    specialRules: [
+      { key: 'Numerous', value: 'Re-roll reinforcement rolls if Borewyrm Infestation reinforcements fail to arrive.' },
+      { key: 'Hard to Hit', value: 'If a Borewyrm Infestation is in cover from an explorer, it is treated as not being visible to that explorer.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return borewyrmTunnelResult;
@@ -1704,17 +1738,20 @@
     name: "Traitor Commissar",
     id: "TC",
     size: "Large",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 2,
     statline2: "",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Bolt Pistol and Power Fist(1)", cols: ["⬠⬠", "△", "□"] }
       ],
       specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+        { key: 'Crushing Blow(1)', value: 'No defence rolls can be made against a wound or grievous wound infliected by a Bolt Pistal and Power First attack at range 1.' }
       ]
     },
+    specialRules: [
+      { key: 'Forwards! For the Dark Gods!', value: 'Re-roll reinforcement rolls for Traitor Guardsmen hostile groups if reinforcements fail to arrive while the Traitor Commissar is on the battlefield.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 7)
         return holdResult;
@@ -1770,17 +1807,21 @@
     name: "Chaos Ogryn",
     id: "CO",
     size: "Huge",
-    move: "??",
-    wounds: "??",
+    move: 3,
+    wounds: 12,
     statline2: "",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Scavenged Maul and Mutant Claw(1)", cols: ["△△", "-", "-"] }
       ],
       specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+        { key: 'Claw Grab(1)', value: 'Before making an attack against an explorer with a Scavenged Maul and Mutant Claw, that explorer must make an agility roll. If this roll is failed, that explorer must re-roll any successes or critical successes when making a defence roll for that attack.' }
       ]
     },
+    specialRules: [
+      { key: 'Blasphemous Icon', value: "When the Chaos Ogryn is activated, roll a △. On a critical success, add 1 to the Chaos Ogryn's Move value for that activation. In addition, if there are any wound counters next to the Chaos Ogryn, remove 1 of those counters." },
+      { key: 'Monstrous Bodyguard', value: 'If the Chaos Ogryn is in a hex adjacent to the Traitor Commissar, the Traitor Commissar cannot be target by weapon actions taken by explorers, unless the attacker is in a hex adjacent to the Traitor Commissar.' }
+    ],
     bodyguardResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -1838,19 +1879,24 @@
   //Poxwalker
   var poxwalkerHostile = {
     name: "Poxwalker",
-    id: "CO",
+    id: "PW",
     size: "Small",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 3,
     statline2: "",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Improvised Weapons and Fists", cols: ["□□", "-", "-"] },
+        { label: "Grenade Flail(1)", cols: ["⬠", "-", "-"] }
       ],
       specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+        { key: 'Uncontrolled Blast(1)', value: 'Make an attack roll against each explorer in the same hex as the target. After resolving these attacks, this Poxwalker is slain.' }
       ]
     },
+    specialRules: [
+      { key: 'Poxwalker Groups', value: 'A Poxwalker group cannot include more than one miniature armed with a grenade flail. In addition, if a Poxwalker group has four or more miniatures, one of the miniatures must be armed with a grenade flail if such a miniature is available.' },
+      { key: 'Shambling Horde', value: 'Halve the result on the Blackstone dice (rounding up) when you make a reinforcement roll for a group with only includes Poxwalkers.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 7)
         return holdResult;
@@ -1878,22 +1924,32 @@
         return lurchResult;
     }
   };
+
   //PLAGUE MARINE
   var plagueMarineHostile = {
     name: "Plague Marine",
     id: "PM",
     size: "Large",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 5,
     statline2: "",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Blight Launcher(1)", cols: ["-", "△", "⬠"] },
+        { label: "Boltgun", cols: ["△△", "⬠", "⬠"] },
+        { label: "Mutated Limb", cols: ["△△", "-", "-"] },
+        { label: "Plasma Gun(2)", cols: ["-", "⬠", "⬠"] },
+        { label: "Power Fist(3)", cols: ["△△", "-", "-"] }
       ],
       specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+        { key: 'Blast(1)', value: 'Ignore cover. In addition, make an attack roll that ignores cover against each explorer in the same hex as the target.' },
+        { key: 'Plasma Gun(2)', value: 'No defence roll can be made against an overcharged Plasma Gun attack (see Annihilate action). Roll a □ after making an overcharged Plasma Gun attack. On a critical success, the hostile that made the attack suffers a grevious wound.' },
+        { key: 'Power Fist(3)', value: 'No defence roll can be made against a Power Fist attack.' }
       ]
     },
+    specialRules: [
+      { key: 'Plague Marine Groups', value: 'A Plague Marine group cannot include more than one miniature armed with a Blight Launcher and a Mutated Limb, or more than one miniature armed with a Boltgun, or more than one miniature armed with a Plasma Gun and a Power Fist.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return sneakResult;
@@ -2052,17 +2108,26 @@
     name: "Cultists",
     id: "CL",
     size: "Small",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 2,
     statline2: "",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Autogun", cols: ["△", "△", "△"] },
+        { label: "Grenade Launcher(1)", cols: ["△/□", "□□/△", "□□/△"] },
+        { label: "Grenade(2)", cols: ["□", "△", "△"] },
+        { label: "Heavy Stubber", cols: ["⬠", "⬠⬠", "⬠"] },
+        { label: "Stubcarbine and Chainsword", cols: ["△△", "□□", "□"] }
       ],
       specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+        { key: 'Ammunition Selector(1)', value: 'When a hostile with a grenade launcher attacks, it will use the first attack dice listed if there are no other explorers in the same hex as the target. If there is more than one explorer in the same hex as the target, it makes an attack against each explorer in the same hex as the target, using the second attack dice listed.' },
+        { key: 'Blast(2)', value: 'Ignore cover. In addition, make an attack roll that ignores cover against each explorer in the same hex as the target.' }
       ]
     },
+    specialRules: [
+      { key: 'Cultist Champion', value: 'Add 1 to the Wounds value of a Cultist Champion.' },
+      { key: 'Cultist Groups', value: 'A Cultist group cannot include more than one Cultist Champion, more than one miniature armed with a Heavy Stubber and more than one miniature armed with a Grenade Launcher. In addition, if a Cultist group has more than five miniatures, one of the miniatures must be a Cultist Champion if available, one of the miniatures must be armed with a Heavy Stubber if available, and one of the miniatures must be armed with a Grenade Launcher if available.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -2117,17 +2182,22 @@
     name: "Cultist Firebrand",
     id: "CF",
     size: "Large",
-    move: "??",
-    wounds: "??",
+    move: 2,
+    wounds: 5,
     statline2: "",
     statsMatrix: {
       rows: [
-        { label: "Example(1)", cols: ["⬠", "⬠", "-"] }
+        { label: "Hellfire Torch(1)", cols: ["△△", "⬠⬠", "Move Up(2)"] }
       ],
       specialRules: [
-        { key: 'Example-spec(1)', value: 'Explanation text that goes here.' }
+        { key: 'Torrent of Flame(1)', value: 'Ignore cover for a Hellfire Torch attack, and make an attack against each other explorer in the same hex as the target.' },
+        { key: 'Move Up(2)', value: 'The Hellfire Torch cannot be fired at this range. The Cultist Firebrand moves towards the closest explorer instead of making an attack.' }
       ]
     },
+    specialRules: [
+      { key: 'Rousing Figurehead', value: 'Add 2 (to a maximum of 20) to behaviour rolls for Cultist hostiles that are within 2 hexes of and visible to the Cultist Firebrand.' },
+      { key: 'Barely Contained Energies', value: 'If a Cultist Firebrand hostile is slain, before removing him from the battlefield, roll a ⬠. On a critical success, make a △ attack roll against each hostile and explorer in the same hex as, or in a hex adjacent to, the Cultist Firebrand.' }
+    ],
     hiddenResult: function (rollResult) {
       if (rollResult < 4)
         return holdResult;
@@ -2257,8 +2327,6 @@
 
 
   };
-
-
 
   //Default Blackstone dice roll. Takes modifier which can be a number (negative or positive)
   function rollD20(modifier) {
@@ -3944,7 +4012,9 @@
                   <div class="form-check">
                     <input type="checkbox" class="form-check-input hostile-toggle" name="" id="OMEmpowered"
                       data-hostile="obsidiusMallexHostile" value="OM">
-                    Empowered
+                    <label class="form-check-label" for="OMEmpowered">
+                      Empowered
+                    </label>
                   </div>
                 </div>
                 <!-- stats matrix (right side) -->
@@ -4334,7 +4404,9 @@
                   <div class="form-check">
                     <input type="checkbox" class="form-check-input hostile-toggle" id="CLCheckBox"
                       data-hostile="cultistHostile" value="CL">
-                    Rousing Figurehead Active
+                    <label class="form-check-label" for="CLCheckBox">
+                      Rousing Figurehead Active
+                    </label>
                   </div>
                 </div>
                 <!-- stats matrix (right side) -->
