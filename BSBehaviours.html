@@ -827,7 +827,7 @@
         { label: "Flamer(1)", cols: ["⬠", "⬠", "Move Up(2)"] },
         { label: "Lasgun", cols: ["△", "△", "△"] },
         { label: "Pistol & Melee Weapon", cols: ["△△", "□", "□"] },
-        { label: "Grenade", cols: ["□", "△", "△"] }
+        { label: "Grenade(1)", cols: ["□", "△", "△"] }
       ],
       specialRules: [
         { key: 'Blast(1)', value: 'Ignores cover. Hits the entire hex, not just the target.' },
@@ -975,7 +975,7 @@
       rows: [
         { label: "Pulse: Threat Level 0(1)", cols: ["□", "□", "□"] },
         { label: "Pulse: Threat Level 1(1)", cols: ["△", "△", "△"] },
-        { label: "Pulse: Threat Level 2(1)", cols: ["□", "□", "□"] },
+        { label: "Pulse: Threat Level 2(1)", cols: ["□□", "□□", "□□"] },
         { label: "Pulse: Threat Level 3(1)", cols: ["⬠", "⬠", "⬠"] },
       ],
       specialRules: [
@@ -2435,6 +2435,9 @@
     function getReferencedAction(desc) {
       if (desc.includes("Onslaught")) return { action: "Onslaught", result: onslaughtResult };
       if (desc.includes("Charge")) return { action: "Charge", result: chargeResult };
+      if (desc.includes("Advance")) return { action: "Advance", result: chargeResult };
+      if (desc.includes("Disrupt")) return { action: "Disrupt", result: chargeResult };
+      if (desc.includes("Sneak")) return { action: "Sneak", result: chargeResult };
       // Add other action lookups as needed
       return null;
     }
