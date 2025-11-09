@@ -2435,9 +2435,9 @@
     function getReferencedAction(desc) {
       if (desc.includes("Onslaught")) return { action: "Onslaught", result: onslaughtResult };
       if (desc.includes("Charge")) return { action: "Charge", result: chargeResult };
-      if (desc.includes("Advance")) return { action: "Advance", result: chargeResult };
-      if (desc.includes("Disrupt")) return { action: "Disrupt", result: chargeResult };
-      if (desc.includes("Sneak")) return { action: "Sneak", result: chargeResult };
+      if (desc.includes("Advance")) return { action: "Advance", result: advanceResult };
+      if (desc.includes("Disrupt")) return { action: "Disrupt", result: disruptResult };
+      if (desc.includes("Sneak")) return { action: "Sneak", result: sneakResult };
       // Add other action lookups as needed
       return null;
     }
